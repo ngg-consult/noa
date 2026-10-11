@@ -1,0 +1,29 @@
+{
+  "_comment": "מבנה קובץ הכללים. הכללים האמיתיים נשמרים באופן פרטי בתוך האפליקציה ואפשר להוריד אותם מהמסך. הדוגמאות כאן להמחשה בלבד.",
+  "rules": [
+    {
+      "id": "rule-example-1",
+      "text": "כל מה שקשור ללקוח X הכי דחוף",
+      "match": { "keywords": ["X"] },
+      "effect": { "priority": 200, "urgent": true, "important": true },
+      "explain": "כל מה שקשור ל\"X\" → בעדיפות עליונה",
+      "active": true
+    },
+    {
+      "id": "rule-example-2",
+      "text": "שיחות טלפון רק בצהריים",
+      "match": { "contexts": ["טלפון"] },
+      "effect": { "window": { "start": "12:00", "end": "15:00" } },
+      "explain": "משימות טלפון → רק בין 12:00 ל-15:00",
+      "active": true
+    },
+    {
+      "id": "rule-example-3",
+      "text": "אני מתחילה לעבוד ב-9",
+      "match": { "all": true },
+      "effect": { "settings": { "dayStart": "09:00" } },
+      "explain": "שעות העבודה: 09:00–18:00",
+      "active": true
+    }
+  ]
+}

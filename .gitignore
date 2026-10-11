@@ -1,0 +1,5 @@
+node_modules/
+*.log
+# נתונים אישיים לא נכנסים למאגר
+data/
+*.local.json

@@ -1,0 +1,1575 @@
+<title>סדר היום של נועה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Rubik:wght@500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* פריסה: ציר זמן יומי אנכי (שעה | פריט | פעולות) לצד עמודת בקרה – כללים, מקורות והוספת משימות */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --ink: #18221f;
+  --muted: #5b6a66;
+  --line: #d9e1de;
+  --accent: #1d6b5c;
+  --accent-ink: #ffffff;
+  --meeting: #34508a;
+  --meeting-bg: #eef2fa;
+  --q1: #b4321f;
+  --q2: #1d6b5c;
+  --q3: #a8650a;
+  --q4: #7b8582;
+  --ok: #1f7a3d;
+  --warn: #9a4b00;
+  --now: #c2410c;
+  --chip: #edf1ef;
+  --font-display: "Rubik", "Assistant", "Segoe UI", Arial, sans-serif;
+  --font-body: "Assistant", "Segoe UI", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101614; --surface: #17201d; --ink: #e5ece9; --muted: #98a8a3; --line: #2a3632;
+    --accent: #5fbfa9; --accent-ink: #0c1311; --meeting: #9db3ea; --meeting-bg: #1b2333;
+    --q1: #f08a76; --q2: #5fbfa9; --q3: #e0a64a; --q4: #8d9894; --ok: #6fcf8e; --warn: #f0a35a;
+    --now: #fb923c; --chip: #223029; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101614; --surface: #17201d; --ink: #e5ece9; --muted: #98a8a3; --line: #2a3632;
+  --accent: #5fbfa9; --accent-ink: #0c1311; --meeting: #9db3ea; --meeting-bg: #1b2333;
+  --q1: #f08a76; --q2: #5fbfa9; --q3: #e0a64a; --q4: #8d9894; --ok: #6fcf8e; --warn: #f0a35a;
+  --now: #fb923c; --chip: #223029; color-scheme: dark;
+}
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 20px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: 1.7rem; }
+h2 { font-size: 1.05rem; }
+.muted { color: var(--muted); }
+.warn { color: var(--warn); margin: 0; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.eyebrow { font-size: .78rem; letter-spacing: .04em; color: var(--muted); }
+.top-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.btn { font: inherit; font-weight: 600; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 14px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn:focus-visible, a:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.small { padding: 4px 10px; font-size: .85rem; }
+.btn.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.btn.miss { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.btn.ghost { background: transparent; }
+
+.busy { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .92rem; }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.4fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.stat { background: var(--surface); padding: 12px 14px; display: grid; gap: 2px; }
+.stat b { font-family: var(--font-mono); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .82rem; color: var(--muted); }
+.matrix { background: var(--surface); padding: 10px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: .82rem; align-content: center; }
+.matrix div { display: flex; justify-content: space-between; gap: 8px; border-inline-start: 3px solid var(--qc); padding-inline-start: 6px; }
+.matrix b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+@media (max-width: 880px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .matrix { grid-column: 1 / -1; }
+}
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+
+ol.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.item { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); align-items: start; }
+.item:first-child { border-top: 0; }
+.time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; display: grid; font-size: .95rem; }
+.time span { color: var(--muted); font-size: .8rem; }
+.body { min-width: 0; display: grid; gap: 4px; }
+.title { font-weight: 700; overflow-wrap: anywhere; }
+.sub { font-size: .84rem; color: var(--muted); overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: .76rem; padding: 1px 8px; border-radius: 999px; background: var(--chip); color: var(--muted); }
+.chip.q { color: var(--qc); background: color-mix(in srgb, var(--qc) 12%, transparent); font-weight: 600; }
+.chip.deleg { color: var(--q3); }
+.chip.rule { color: var(--accent); }
+.acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+a.open { font-size: .82rem; color: var(--accent); width: fit-content; }
+
+@media (max-width: 560px) {
+  .item { grid-template-columns: 50px minmax(0, 1fr); }
+  .item .acts { grid-column: 2; justify-content: flex-start; }
+  .item .acts:empty { display: none; }
+}
+.task { border-inline-start: 4px solid var(--qc); padding-inline-start: 10px; }
+.q-Q1 { --qc: var(--q1); } .q-Q2 { --qc: var(--q2); } .q-Q3 { --qc: var(--q3); } .q-Q4 { --qc: var(--q4); }
+.task.is-done .title { text-decoration: line-through; color: var(--muted); }
+.task.overdue { background: color-mix(in srgb, var(--warn) 7%, transparent); }
+.done-mark { color: var(--ok); font-weight: 700; font-size: .9rem; }
+
+.meeting { background: var(--meeting-bg); border-inline-start: 4px solid var(--meeting); padding-inline: 10px; border-radius: 6px; margin-block: 4px; border-top: 0; }
+.meeting .title { color: var(--meeting); }
+.meeting.tentative { border-inline-start-style: dashed; }
+.prep { font-size: .9rem; }
+.prep-k { font-size: .72rem; font-weight: 700; letter-spacing: .04em; color: var(--meeting); margin-inline-end: 8px; }
+.allday .body { color: var(--muted); }
+.none { color: var(--muted); grid-template-columns: 1fr; }
+
+.now { list-style: none; display: flex; align-items: center; gap: 8px; color: var(--now); font-family: var(--font-mono); font-size: .78rem; padding-block: 4px; }
+.now::after { content: ""; flex: 1; height: 2px; background: var(--now); border-radius: 2px; }
+
+ul.plain { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mini { display: flex; justify-content: space-between; gap: 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 8px; }
+.mini-t { min-width: 0; display: grid; font-size: .9rem; }
+.mini-t span { font-size: .8rem; }
+
+.src { display: grid; grid-template-columns: 10px 1fr auto; gap: 2px 8px; align-items: center; font-size: .9rem; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--q4); }
+.st-ok .dot { background: var(--ok); }
+.st-error .dot { background: var(--q1); }
+.st-fallback .dot, .st-manual .dot { background: var(--q3); }
+.st { font-size: .78rem; color: var(--muted); }
+.src-msg { grid-column: 2 / -1; margin: 0; font-size: .8rem; color: var(--muted); }
+
+textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--bg); color: var(--ink); resize: vertical; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.rule { display: flex; justify-content: space-between; gap: 10px; align-items: start; border-top: 1px solid var(--line); padding-top: 8px; }
+.rule-body { display: grid; min-width: 0; font-size: .9rem; overflow-wrap: anywhere; }
+.rule-body span { font-size: .8rem; }
+.rule.off .rule-body { opacity: .55; }
+.rule-explain { margin: 0; font-weight: 600; }
+.preview { background: var(--chip); border-radius: 8px; padding: 10px; display: grid; gap: 8px; }
+.hint { font-size: .8rem; color: var(--muted); margin: 0; }
+
+.empty { text-align: start; color: var(--muted); padding: 24px 0; }
+.toast { position: fixed; inset-inline: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 480px; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: .92rem; box-shadow: 0 6px 20px rgb(0 0 0 / .18); }
+</style>
+
+<div class="wrap" dir="rtl" lang="he">
+  <header class="top">
+    <div>
+      <div class="eyebrow">סדר היום · שעות עבודה <span id="hours">08:30–18:00</span></div>
+      <h1 id="today">היום</h1>
+    </div>
+    <div class="top-actions">
+      <div class="busy" id="busy" hidden><span class="spinner" aria-hidden="true"></span><span id="busy-text"></span></div>
+      <span class="muted" id="updated"></span>
+      <button class="btn primary" id="refresh" type="button">רענון מ-Outlook</button>
+    </div>
+  </header>
+
+  <section class="summary" id="summary" hidden aria-label="סיכום היום">
+    <div class="stat"><b id="s-meetings">0</b><span>פגישות</span></div>
+    <div class="stat"><b id="s-tasks">0</b><span>משימות משובצות</span></div>
+    <div class="stat"><b id="s-done">0</b><span>בוצעו</span></div>
+    <div class="stat"><b id="s-tomorrow">0</b><span>עוברות למחר</span></div>
+    <div class="matrix" aria-label="מטריצת אייזנהאואר – משימות פתוחות">
+      <div class="q-Q1"><span>דחוף וחשוב</span><b id="m-Q1">0</b></div>
+      <div class="q-Q2"><span>חשוב</span><b id="m-Q2">0</b></div>
+      <div class="q-Q3"><span>דחוף – להאציל</span><b id="m-Q3">0</b></div>
+      <div class="q-Q4"><span>לוותר</span><b id="m-Q4">0</b></div>
+    </div>
+  </section>
+
+  <div class="layout">
+    <div style="display:grid;gap:20px;min-width:0">
+      <section class="panel" aria-labelledby="day-h">
+        <div class="panel-head"><h2 id="day-h">הלו"ז</h2><span class="muted" style="font-size:.82rem">סמני "בוצע" או "לא בוצע" – שאר היום יסודר מחדש</span></div>
+        <div class="empty" id="empty"><p id="empty-text">כאן יופיע סדר היום: הפגישות מהיומן, ובין הפגישות משימות מהמיילים, עם שעה לכל משימה ושורת הכנה לכל פגישה. הלו"ז נבנה אוטומטית בפתיחה הראשונה של כל בוקר.</p></div>
+        <ol class="timeline" id="timeline"></ol>
+      </section>
+
+      <section class="panel" id="later" hidden>
+        <div id="tomorrow-wrap">
+          <div class="panel-head"><h2>עובר למחר</h2><span class="muted" style="font-size:.82rem">לא נמצא להן חלון פנוי היום</span></div>
+          <ul class="plain" id="tomorrow-list"></ul>
+        </div>
+        <div id="deferred-wrap">
+          <div class="panel-head"><h2>לא שובץ</h2><span class="muted" style="font-size:.82rem">לא דחוף ולא חשוב, או ללא פעולה נדרשת</span></div>
+          <ul class="plain" id="deferred-list"></ul>
+        </div>
+      </section>
+    </div>
+
+    <aside style="display:grid;gap:20px;min-width:0">
+      <section class="panel" aria-labelledby="rules-h">
+        <div class="panel-head"><h2 id="rules-h">כללים</h2><button class="btn ghost small" id="export" type="button" hidden>הורדת קובץ הכללים</button></div>
+        <form id="rule-form" class="row" style="display:grid;gap:8px">
+          <label for="rule-text" class="hint">כתבי תיקון במילים שלך. הוא יישמר ככלל ויופעל בכל בוקר.</label>
+          <textarea id="rule-text" rows="2" placeholder='למשל: כל מה שקשור ללקוח רש"ת הכי דחוף'></textarea>
+          <div class="row"><button class="btn primary small" id="rule-submit" type="submit">הוספת כלל</button></div>
+        </form>
+        <div class="preview" id="rule-preview" hidden></div>
+        <p class="hint" id="rules-empty">עוד אין כללים. דוגמאות: "שיחות טלפון רק בצהריים", "אני מתחילה לעבוד ב-9", "מיילים מ-iaa.gov.il בעדיפות גבוהה".</p>
+        <ul class="plain" id="rules"></ul>
+      </section>
+
+      <section class="panel" aria-labelledby="paste-h">
+        <h2 id="paste-h">הוספת משימות</h2>
+        <form id="paste-form" style="display:grid;gap:8px">
+          <label for="paste-text" class="hint">הדביקי הודעות מוואטסאפ או מ-Teams, או כתבי משימות בשורות נפרדות.</label>
+          <textarea id="paste-text" rows="4"></textarea>
+          <div class="row"><button class="btn small" id="paste-submit" type="submit">חילוץ ושיבוץ</button></div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="src-h">
+        <div class="panel-head"><h2 id="src-h">מקורות</h2><button class="btn ghost small" id="perm-btn" type="button" hidden>הרשאות</button></div>
+        <ul class="plain" id="sources"></ul>
+      </section>
+    </aside>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<script>
+/*
+ * MorningEngine – לוגיקת התעדוף והשיבוץ של "סדר היום".
+ * פונקציות טהורות בלבד (ללא DOM וללא רשת), כדי שאפשר יהיה לבדוק אותן ב-Node.
+ * כל הזמנים בתוך היום נשמרים כדקות מחצות לפי אזור הזמן של המשתמשת.
+ */
+(function (root) {
+  'use strict';
+
+  var DEFAULTS = {
+    tz: 'Asia/Jerusalem',
+    dayStart: '08:30',
+    dayEnd: '18:00',
+    bufferMin: 5,      // מרווח לפני ואחרי כל פגישה
+    minSlot: 10,       // חלון קצר מזה לא משמש לשיבוץ
+    mailLookbackDays: 3
+  };
+
+  var CONTEXTS = ['מחשב', 'טלפון', 'פגישה', 'בחוץ'];
+
+  var QUADRANTS = {
+    Q1: { label: 'דחוף וחשוב', action: 'לבצע היום', base: 100 },
+    Q2: { label: 'חשוב, לא דחוף', action: 'לתכנן ולבצע', base: 70 },
+    Q3: { label: 'דחוף, לא חשוב', action: 'להאציל', base: 45 },
+    Q4: { label: 'לא דחוף ולא חשוב', action: 'לוותר או לדחות', base: 10 }
+  };
+
+  // ---------- זמן ----------
+
+  function hm(s) {
+    var p = String(s).split(':');
+    return Number(p[0]) * 60 + Number(p[1] || 0);
+  }
+
+  function fmt(min) {
+    min = Math.max(0, Math.round(min));
+    var h = Math.floor(min / 60), m = min % 60;
+    return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  }
+
+  function roundUp(n, step) { return Math.ceil(n / step) * step; }
+
+  var dtfCache = {};
+  function dtf(tz) {
+    if (!dtfCache[tz]) {
+      dtfCache[tz] = new Intl.DateTimeFormat('en-CA', {
+        timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23', weekday: 'short'
+      });
+    }
+    return dtfCache[tz];
+  }
+
+  // תאריך מקומי (YYYY-MM-DD), דקה ביום ויום בשבוע (0=ראשון) של רגע נתון
+  function localParts(date, tz) {
+    var parts = {};
+    dtf(tz || DEFAULTS.tz).formatToParts(date).forEach(function (p) { parts[p.type] = p.value; });
+    var wd = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(parts.weekday);
+    return {
+      date: parts.year + '-' + parts.month + '-' + parts.day,
+      min: Number(parts.hour) * 60 + Number(parts.minute),
+      weekday: wd
+    };
+  }
+
+  function addDays(dateStr, n) {
+    var d = new Date(dateStr + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // Graph מחזיר {dateTime, timeZone}; כשהאזור הוא UTC מוסיפים Z.
+  // אזור אחר מתפרש כשעון-קיר באזור הזמן של האפליקציה.
+  function graphTime(t, tz) {
+    if (!t || !t.dateTime) return null;
+    var s = String(t.dateTime).slice(0, 19);
+    var zone = String(t.timeZone || 'UTC');
+    if (/^(UTC|GMT|Etc\/UTC|Coordinated Universal Time)$/i.test(zone)) {
+      return localParts(new Date(s + 'Z'), tz);
+    }
+    return { date: s.slice(0, 10), min: hm(s.slice(11, 16)), weekday: new Date(s.slice(0, 10) + 'T12:00:00Z').getUTCDay() };
+  }
+
+  // ---------- קריאת תוצאות המחבר ----------
+
+  // מחבר Microsoft 365 מחזיר כל פריט כבלוק טקסט JSON נפרד, והאחרון מכיל nextOffset
+  function parseToolBlocks(result) {
+    var items = [], nextOffset = null;
+    var blocks = (result && result.content) || [];
+    blocks.forEach(function (b) {
+      if (!b || b.type !== 'text' || typeof b.text !== 'string') return;
+      var obj;
+      try { obj = JSON.parse(b.text); } catch (e) { return; }
+      var list = Array.isArray(obj) ? obj : [obj];
+      list.forEach(function (o) {
+        if (!o || typeof o !== 'object') return;
+        if (o.id || o.uri) items.push(o);
+        else if (o.nextOffset != null) nextOffset = o.nextOffset;
+      });
+    });
+    if (!items.length && result && Array.isArray(result.payload)) {
+      result.payload.forEach(function (o) { if (o && (o.id || o.uri)) items.push(o); });
+    }
+    return { items: items, nextOffset: nextOffset };
+  }
+
+  // ---------- נרמול ----------
+
+  function normalizeEvents(raw, dateStr, cfg) {
+    cfg = cfg || DEFAULTS;
+    var out = [], allDay = [];
+    (raw || []).forEach(function (e) {
+      if (!e || e.isCancelled) return;
+      var s = graphTime(e.start, cfg.tz), en = graphTime(e.end, cfg.tz);
+      if (!s || !en) return;
+      if (e.isAllDay) {
+        if (s.date <= dateStr && en.date >= dateStr) allDay.push({ id: e.id, title: e.subject || 'אירוע' });
+        return;
+      }
+      if (s.date > dateStr || en.date < dateStr) return;
+      var start = s.date < dateStr ? 0 : s.min;
+      var end = en.date > dateStr ? 24 * 60 : en.min;
+      if (end <= start) return;
+      out.push({
+        id: e.id,
+        kind: 'meeting',
+        title: e.subject || 'פגישה',
+        start: start,
+        end: end,
+        organizer: e.organizer || '',
+        attendees: e.attendees || [],
+        location: e.location || '',
+        link: e.webLink || '',
+        tentative: e.showAs === 'tentative',
+        free: e.showAs === 'free',
+        prep: ''
+      });
+    });
+    out.sort(function (a, b) { return a.start - b.start || a.end - b.end; });
+    return { meetings: out, allDay: allDay };
+  }
+
+  var INVITE_SUBJECT = /^(accepted|declined|tentative|canceled|cancelled|updated invitation|invitation|התקבל|נדחה|מבוטל|בוטל|הזמנה|אושר|מקובל|טנטטיבי)\b/i;
+  var INVITE_BODY = /(Microsoft Teams Need help|Join the meeting now|פגישת Microsoft Teams|Microsoft Teams meeting|להצטרף אל: https:\/\/teams)/i;
+
+  function isInvite(m) {
+    return INVITE_SUBJECT.test(String(m.subject || '').trim()) || INVITE_BODY.test(String(m.summary || ''));
+  }
+
+  function normalizeEmails(raw, me) {
+    var mine = String(me || '').toLowerCase();
+    var seen = {};
+    var out = [];
+    (raw || []).forEach(function (m) {
+      if (!m || !m.id || seen[m.id]) return;
+      seen[m.id] = true;
+      var from = String(m.sender || '');
+      if (mine && from.toLowerCase() === mine) return;
+      if (isInvite(m)) return;
+      out.push({
+        id: 'mail:' + m.id,
+        source: 'mail',
+        title: String(m.subject || '(ללא נושא)').trim(),
+        from: from,
+        receivedAt: m.receivedDateTime || m.sentDateTime || null,
+        snippet: String(m.summary || '').replace(/\s+/g, ' ').trim().slice(0, 300),
+        link: m.webLink || '',
+        importance: m.importance || 'normal',
+        isRead: !!m.isRead
+      });
+    });
+    return out;
+  }
+
+  // ---------- סיווג ללא AI (גיבוי) ----------
+
+  var URGENT_WORDS = /(דחוף|בהקדם|היום|עד מחר|מיידי|ASAP|urgent|immediately|EOD|deadline|דדליין|תזכורת)/i;
+  var NOISE_WORDS = /(newsletter|unsubscribe|ניוזלטר|להסרה|הסר מרשימת|no-?reply|noreply|webinar|וובינר|מבצע|promotion)/i;
+
+  function heuristicClassify(item) {
+    var text = [item.title, item.snippet, item.from].join(' ');
+    var noise = NOISE_WORDS.test(text);
+    var urgent = item.importance === 'high' || URGENT_WORDS.test(text);
+    var phone = /(להתקשר|שיחה|טלפון|call me|תתקשרי|תחזרי אליי)/i.test(text);
+    return {
+      actionable: !noise,
+      nextAction: (phone ? 'להתקשר בנושא: ' : 'לעבור ולהשיב: ') + item.title,
+      minutes: 15,
+      context: phone ? 'טלפון' : 'מחשב',
+      urgent: urgent,
+      important: !noise,
+      delegateTo: null,
+      client: null,
+      classifiedBy: 'heuristic'
+    };
+  }
+
+  // מנקה ומגביל תשובה שהגיעה מ-AI, כך שערכים לא תקינים לא ישברו את השיבוץ
+  function sanitizeClassification(c, item) {
+    var h = heuristicClassify(item);
+    if (!c || typeof c !== 'object') return h;
+    var minutes = Number(c.minutes);
+    if (!isFinite(minutes) || minutes <= 0) minutes = h.minutes;
+    minutes = Math.min(240, Math.max(2, Math.round(minutes)));
+    return {
+      actionable: c.actionable !== false,
+      nextAction: typeof c.nextAction === 'string' && c.nextAction.trim() ? c.nextAction.trim().slice(0, 160) : h.nextAction,
+      minutes: minutes,
+      context: CONTEXTS.indexOf(c.context) >= 0 ? c.context : h.context,
+      urgent: !!c.urgent,
+      important: c.important === undefined ? h.important : !!c.important,
+      delegateTo: typeof c.delegateTo === 'string' && c.delegateTo.trim() ? c.delegateTo.trim().slice(0, 60) : null,
+      client: typeof c.client === 'string' && c.client.trim() ? c.client.trim().slice(0, 60) : null,
+      classifiedBy: 'ai'
+    };
+  }
+
+  function makeTask(item, cls) {
+    var t = {};
+    Object.keys(item).forEach(function (k) { t[k] = item[k]; });
+    Object.keys(cls).forEach(function (k) { t[k] = cls[k]; });
+    t.kind = 'task';
+    t.status = t.status || 'pending';
+    t.missedCount = t.missedCount || 0;
+    return t;
+  }
+
+  // ---------- כללים ----------
+
+  function ruleMatches(rule, task) {
+    var m = rule.match || {};
+    var hay = [task.title, task.from, task.snippet, task.client, task.nextAction, task.delegateTo]
+      .join(' ').toLowerCase();
+    var groups = 0;
+    if (m.keywords && m.keywords.length) {
+      groups++;
+      if (!m.keywords.some(function (k) { return k && hay.indexOf(String(k).toLowerCase()) >= 0; })) return false;
+    }
+    if (m.senders && m.senders.length) {
+      groups++;
+      var from = String(task.from || '').toLowerCase();
+      if (!m.senders.some(function (s) { return s && from.indexOf(String(s).toLowerCase()) >= 0; })) return false;
+    }
+    if (m.contexts && m.contexts.length) {
+      groups++;
+      if (m.contexts.indexOf(task.context) < 0) return false;
+    }
+    if (m.sources && m.sources.length) {
+      groups++;
+      if (m.sources.indexOf(task.source) < 0) return false;
+    }
+    if (m.quadrants && m.quadrants.length) {
+      groups++;
+      if (m.quadrants.indexOf(quadrantOf(task)) < 0) return false;
+    }
+    if (m.maxMinutes) {
+      groups++;
+      if (!(task.minutes <= m.maxMinutes)) return false;
+    }
+    if (m.minMinutes) {
+      groups++;
+      if (!(task.minutes >= m.minMinutes)) return false;
+    }
+    return groups > 0 || m.all === true;
+  }
+
+  // הגדרות יום (שעת התחלה/סיום, מרווח) שנקבעו בכללים – הכלל האחרון גובר
+  function settingsFromRules(rules, base) {
+    var s = {};
+    Object.keys(base || DEFAULTS).forEach(function (k) { s[k] = (base || DEFAULTS)[k]; });
+    (rules || []).forEach(function (r) {
+      if (r.active === false || !r.effect || !r.effect.settings) return;
+      var e = r.effect.settings;
+      if (e.dayStart) s.dayStart = e.dayStart;
+      if (e.dayEnd) s.dayEnd = e.dayEnd;
+      if (e.bufferMin != null) s.bufferMin = Number(e.bufferMin);
+    });
+    return s;
+  }
+
+  function applyRules(tasks, rules) {
+    return tasks.map(function (t0) {
+      var t = {};
+      Object.keys(t0).forEach(function (k) { t[k] = t0[k]; });
+      t.ruleBoost = 0;
+      t.window = null;
+      t.appliedRules = [];
+      t.skipped = false;
+      (rules || []).forEach(function (r) {
+        if (r.active === false || !r.effect || !ruleMatches(r, t)) return;
+        var e = r.effect;
+        t.appliedRules.push(r.id);
+        if (typeof e.priority === 'number') t.ruleBoost += e.priority;
+        if (e.urgent != null) t.urgent = !!e.urgent;
+        if (e.important != null) t.important = !!e.important;
+        if (e.minutes) t.minutes = Number(e.minutes);
+        if (e.context && CONTEXTS.indexOf(e.context) >= 0) t.context = e.context;
+        if (e.delegateTo) t.delegateTo = e.delegateTo;
+        if (e.skip) t.skipped = true;
+        if (e.window && (e.window.start || e.window.end)) {
+          t.window = { start: e.window.start || null, end: e.window.end || null };
+        }
+      });
+      return t;
+    });
+  }
+
+  // ---------- תעדוף ----------
+
+  function quadrantOf(t) {
+    if (t.urgent && t.important) return 'Q1';
+    if (t.important) return 'Q2';
+    if (t.urgent) return 'Q3';
+    return 'Q4';
+  }
+
+  // ככל שהפריט חדש יותר – תוספת גבוהה יותר (דעיכה של 24 שעות)
+  function recencyBoost(receivedAt, nowMs) {
+    if (!receivedAt) return 0;
+    var age = (nowMs - new Date(receivedAt).getTime()) / 3600000;
+    if (!isFinite(age)) return 0;
+    if (age < 0) age = 0;
+    return 30 * Math.exp(-age / 24);
+  }
+
+  function scoreTask(t, nowMs) {
+    var q = quadrantOf(t);
+    var s = QUADRANTS[q].base + recencyBoost(t.receivedAt, nowMs) + (t.ruleBoost || 0);
+    if (t.minutes <= 2) s += 8;               // GTD: פחות משתי דקות – לעשות מיד
+    if (t.carried) s += 10 + 5 * Math.min(3, t.missedCount || 0); // לא להזניח את מה שנדחה
+    return Math.round(s * 10) / 10;
+  }
+
+  // משך בפועל ביומן: GTD – משימה לא דחופה-לא חשובה שמאצילים לוקחת רק 5 דקות של העברה
+  function slotMinutes(t) {
+    var m = t.minutes || 15;
+    if (quadrantOf(t) === 'Q3' && t.delegateTo) m = 5;
+    return Math.max(5, roundUp(m, 5));
+  }
+
+  // ---------- חלונות פנויים ושיבוץ ----------
+
+  function mergeBusy(intervals) {
+    var list = intervals.slice().sort(function (a, b) { return a[0] - b[0]; });
+    var out = [];
+    list.forEach(function (iv) {
+      var last = out[out.length - 1];
+      if (last && iv[0] <= last[1]) last[1] = Math.max(last[1], iv[1]);
+      else out.push([iv[0], iv[1]]);
+    });
+    return out;
+  }
+
+  function freeWindows(meetings, cfg, fromMin) {
+    var dayStart = hm(cfg.dayStart), dayEnd = hm(cfg.dayEnd);
+    var start = Math.max(dayStart, roundUp(fromMin || 0, 5));
+    var buf = cfg.bufferMin || 0;
+    var busy = mergeBusy(meetings.filter(function (m) { return !m.free; }).map(function (m) {
+      var b = m.kind === 'meeting' ? buf : 0; // מרווח רק סביב פגישות
+      return [m.start - b, m.end + b];
+    }));
+    var wins = [], cur = start;
+    busy.forEach(function (b) {
+      if (b[1] <= cur) return;
+      if (b[0] > cur) wins.push({ start: cur, end: Math.min(b[0], dayEnd) });
+      cur = Math.max(cur, b[1]);
+    });
+    if (cur < dayEnd) wins.push({ start: cur, end: dayEnd });
+    return wins.filter(function (w) { return w.end - w.start >= (cfg.minSlot || 10); });
+  }
+
+  function byPriority(a, b) {
+    return (b.score - a.score) ||
+      (new Date(b.receivedAt || 0) - new Date(a.receivedAt || 0)) ||
+      String(a.id).localeCompare(String(b.id));
+  }
+
+  // שיבוץ חמדני: המשימה בעדיפות הגבוהה ביותר מקבלת את החלון המוקדם ביותר שמתאים לה
+  function schedule(tasks, windows) {
+    var wins = windows.map(function (w) { return { start: w.start, end: w.end }; });
+    var placed = [], overflow = [];
+    tasks.slice().sort(byPriority).forEach(function (t) {
+      var dur = slotMinutes(t);
+      var lo = t.window && t.window.start ? hm(t.window.start) : 0;
+      var hi = t.window && t.window.end ? hm(t.window.end) : 24 * 60;
+      if (t.notBefore) lo = Math.max(lo, t.notBefore);
+      for (var i = 0; i < wins.length; i++) {
+        var w = wins[i];
+        var s = Math.max(w.start, lo), e = Math.min(w.end, hi);
+        if (e - s >= dur) {
+          placed.push({ id: t.id, start: s, end: s + dur });
+          var pieces = [];
+          if (s - w.start >= 5) pieces.push({ start: w.start, end: s });
+          if (w.end - (s + dur) >= 5) pieces.push({ start: s + dur, end: w.end });
+          wins.splice.apply(wins, [i, 1].concat(pieces));
+          return;
+        }
+      }
+      overflow.push(t.id);
+    });
+    return { placed: placed, overflow: overflow };
+  }
+
+  // ---------- תכנון מלא ----------
+
+  /*
+   * plan: { date, meetings, tasks } – tasks כוללות status: pending|done|missed|dismissed.
+   * מחשבת מחדש ציון ושיבוץ לכל מה שלא בוצע, החל מ-fromMin (לרוב "עכשיו").
+   * משימות שבוצעו נשארות במקומן לתיעוד.
+   */
+  function replan(plan, rules, opts) {
+    var cfg = settingsFromRules(rules, opts.cfg || DEFAULTS);
+    var nowMs = opts.nowMs;
+    var fromMin = opts.fromMin || 0;
+    var ruled = applyRules(plan.tasks, rules);
+    var open = [], keep = [], deferred = [];
+    ruled.forEach(function (t) {
+      t.quadrant = quadrantOf(t);
+      t.score = scoreTask(t, nowMs);
+      if (t.status === 'done' || t.status === 'dismissed') { keep.push(t); return; }
+      if (!t.forced && (t.actionable === false || t.skipped || t.quadrant === 'Q4')) {
+        t.start = t.end = null;
+        t.placement = 'deferred';
+        deferred.push(t);
+        return;
+      }
+      open.push(t);
+    });
+
+    // חלונות פנויים: גם משימות שכבר בוצעו תופסות את זמנן
+    var blocks = plan.meetings.concat(keep.filter(function (t) { return t.start != null; }).map(function (t) {
+      return { start: t.start, end: t.end };
+    }));
+    var wins = freeWindows(blocks, cfg, fromMin);
+    var res = schedule(open, wins);
+    var at = {};
+    res.placed.forEach(function (p) { at[p.id] = p; });
+    open.forEach(function (t) {
+      if (at[t.id]) { t.start = at[t.id].start; t.end = at[t.id].end; t.placement = 'today'; }
+      else { t.start = t.end = null; t.placement = 'tomorrow'; }
+    });
+
+    var tasks = keep.concat(open, deferred).sort(function (a, b) {
+      var as = a.start == null ? 1e9 : a.start, bs = b.start == null ? 1e9 : b.start;
+      return as - bs || byPriority(a, b);
+    });
+    return {
+      date: plan.date,
+      meetings: plan.meetings,
+      allDay: plan.allDay || [],
+      tasks: tasks,
+      cfg: cfg,
+      plannedAt: new Date(nowMs).toISOString()
+    };
+  }
+
+  function markTask(plan, id, status, nowMin) {
+    var tasks = plan.tasks.map(function (t) {
+      if (t.id !== id) return t;
+      var c = {};
+      Object.keys(t).forEach(function (k) { c[k] = t[k]; });
+      c.status = status;
+      if (status === 'done') {
+        // בוצעה: נרשמת בזמן שבו סומנה (או בחלון ששובץ לה, אם עדיין לא עבר)
+        var dur = c.end != null && c.start != null ? c.end - c.start : slotMinutes(c);
+        if (c.start == null || c.start > nowMin) { c.end = roundUp(nowMin, 5); c.start = Math.max(0, c.end - dur); }
+        else if (nowMin < c.end) c.end = Math.max(c.start + 5, roundUp(nowMin, 5)); // הסתיימה מוקדם – שאר הזמן מתפנה
+        c.doneAt = new Date().toISOString();
+      }
+      if (status === 'missed') {
+        c.missedCount = (c.missedCount || 0) + 1;
+        c.notBefore = c.end != null ? Math.max(c.end, nowMin) : nowMin; // עוברת לשעה פנויה מאוחרת יותר
+        c.status = 'pending';
+        c.carried = true;
+      }
+      if (status === 'pending') { c.doneAt = null; }
+      return c;
+    });
+    return { date: plan.date, meetings: plan.meetings, allDay: plan.allDay, tasks: tasks };
+  }
+
+  // מה עובר מהתוכנית של אתמול לבוקר הבא
+  function carryOver(prevPlan) {
+    if (!prevPlan || !prevPlan.tasks) return [];
+    return prevPlan.tasks.filter(function (t) {
+      return t.status !== 'done' && t.status !== 'dismissed' && t.actionable !== false;
+    }).map(function (t) {
+      var c = {};
+      Object.keys(t).forEach(function (k) { c[k] = t[k]; });
+      c.carried = true;
+      c.status = 'pending';
+      c.start = c.end = null;
+      c.notBefore = null;
+      return c;
+    });
+  }
+
+  // ---------- פירוש כלל ללא AI (גיבוי) ----------
+
+  var DAYPARTS = [
+    { re: /(בבוקר|בוקר)/, start: '08:00', end: '12:00', label: 'בוקר' },
+    { re: /(בצהריים|צהריים|בצהרים|צהרים)/, start: '12:00', end: '15:00', label: 'צהריים' },
+    { re: /(אחה"צ|אחר הצהריים|אחרי הצהריים|אחה״צ)/, start: '14:00', end: '18:00', label: 'אחה"צ' },
+    { re: /(בערב|ערב)/, start: '17:00', end: '21:00', label: 'ערב' },
+    { re: /(סוף היום|בסוף היום)/, start: '16:00', end: '18:00', label: 'סוף היום' }
+  ];
+
+  function parseRuleText(text) {
+    var t = String(text || '').trim();
+    var rule = { text: t, match: {}, effect: {}, explain: '' };
+    var mTime = t.match(/(?:מתחיל[הת]?|להתחיל)[^0-9]*(\d{1,2}(?::\d{2})?)/);
+    var eTime = t.match(/(?:מסיימ[הת]?|לסיים|עד)\s*(?:ב-?|בשעה\s*)?(\d{1,2}(?::\d{2})?)/);
+    if (mTime || (eTime && /יום/.test(t))) {
+      var norm = function (x) { return /:/.test(x) ? x.padStart(5, '0') : String(x).padStart(2, '0') + ':00'; };
+      rule.effect.settings = {};
+      if (mTime) rule.effect.settings.dayStart = norm(mTime[1]);
+      if (eTime) rule.effect.settings.dayEnd = norm(eTime[1]);
+      rule.match.all = true;
+      rule.explain = 'שעות העבודה: ' + (rule.effect.settings.dayStart || DEFAULTS.dayStart) + '–' + (rule.effect.settings.dayEnd || DEFAULTS.dayEnd);
+      return rule;
+    }
+    var about = t.match(/(?:קשור|שקשור|הקשור|שקשורים|קשורות)\s*ל[-־]?\s*(.+?)(?:\s+(?:הכי|הוא|היא|זה|יהיה|תמיד|רק|קודם|בעדיפות)|[,.]|$)/);
+    var subject = about ? about[1].replace(/^(לקוח|הלקוח|פרויקט|הפרויקט)\s+/, '').trim() : null;
+    if (subject) rule.match.keywords = [subject];
+    CONTEXTS.forEach(function (c) {
+      var re = c === 'טלפון' ? /(טלפון|שיחות|שיחה|להתקשר)/ : c === 'פגישה' ? /(פגישה|פגישות)/ : c === 'בחוץ' ? /(בחוץ|סידורים)/ : /(מחשב)/;
+      if (re.test(t) && !subject) { rule.match.contexts = (rule.match.contexts || []).concat([c]); }
+    });
+    if (/(קצרות|קצרים|קטנות)/.test(t) && !subject) rule.match.maxMinutes = 15;
+    if (/(ארוכות|עמוקה|ריכוז)/.test(t) && !subject) rule.match.minMinutes = 45;
+    if (/(הכי דחוף|בראש|קודם כל|עדיפות עליונה|הכי חשוב)/.test(t)) {
+      rule.effect.priority = 200; rule.effect.urgent = true; rule.effect.important = true;
+    } else if (/(דחוף|חשוב|עדיפות גבוהה)/.test(t) && !/לא\s+(דחוף|חשוב)/.test(t)) {
+      rule.effect.priority = 40;
+    } else if (/(לא דחוף|לא חשוב|בסוף|אחרון|עדיפות נמוכה)/.test(t)) {
+      rule.effect.priority = -40;
+    }
+    if (/(לדלג|להתעלם|לא להציג|לא לשבץ)/.test(t)) rule.effect.skip = true;
+    DAYPARTS.forEach(function (d) {
+      if (!rule.effect.window && d.re.test(t) && /(רק|תמיד|לשבץ|ב)/.test(t)) {
+        rule.effect.window = { start: d.start, end: d.end };
+      }
+    });
+    var range = t.match(/בין\s*(\d{1,2}(?::\d{2})?)\s*(?:ל|-|עד)\s*-?(\d{1,2}(?::\d{2})?)/);
+    if (range) {
+      var n = function (x) { return /:/.test(x) ? x.padStart(5, '0') : String(x).padStart(2, '0') + ':00'; };
+      rule.effect.window = { start: n(range[1]), end: n(range[2]) };
+    }
+    var dele = t.match(/(?:להאציל|להעביר|לתת)\s+ל[-־]?\s*([^\s,.]+)/);
+    if (dele) rule.effect.delegateTo = dele[1];
+    rule.explain = explainRule(rule);
+    return rule;
+  }
+
+  function explainRule(rule) {
+    var m = rule.match || {}, e = rule.effect || {}, who = [];
+    if (m.keywords && m.keywords.length) who.push('כל מה שקשור ל"' + m.keywords.join('" / "') + '"');
+    if (m.senders && m.senders.length) who.push('מהשולחים ' + m.senders.join(', '));
+    if (m.contexts && m.contexts.length) who.push('משימות ' + m.contexts.join('/'));
+    if (m.maxMinutes) who.push('משימות של עד ' + m.maxMinutes + ' דק\'');
+    if (m.minMinutes) who.push('משימות של ' + m.minMinutes + ' דק\' ומעלה');
+    if (m.quadrants && m.quadrants.length) who.push('משימות ברבע ' + m.quadrants.join('/'));
+    var what = [];
+    if (e.priority >= 150) what.push('בעדיפות עליונה');
+    else if (e.priority > 0) what.push('בעדיפות גבוהה יותר');
+    else if (e.priority < 0) what.push('בעדיפות נמוכה יותר');
+    if (e.window) what.push('רק בין ' + (e.window.start || 'תחילת היום') + ' ל-' + (e.window.end || 'סוף היום'));
+    if (e.minutes) what.push(e.minutes + ' דקות');
+    if (e.delegateTo) what.push('להאציל ל' + e.delegateTo);
+    if (e.skip) what.push('לא לשבץ');
+    if (e.settings) what.push('שעות עבודה ' + (e.settings.dayStart || '') + '–' + (e.settings.dayEnd || ''));
+    if (!who.length && !what.length) return '';
+    return (who.join(', ') || 'כל המשימות') + ' → ' + (what.join(', ') || 'ללא שינוי');
+  }
+
+  function isUsableRule(rule) {
+    if (!rule || !rule.effect) return false;
+    var e = rule.effect, m = rule.match || {};
+    var hasEffect = typeof e.priority === 'number' || e.window || e.minutes || e.delegateTo || e.skip ||
+      e.settings || e.urgent != null || e.important != null || e.context;
+    var hasMatch = m.all || (m.keywords && m.keywords.length) || (m.senders && m.senders.length) ||
+      (m.contexts && m.contexts.length) || (m.sources && m.sources.length) ||
+      (m.quadrants && m.quadrants.length) || m.maxMinutes || m.minMinutes;
+    return !!(hasEffect && hasMatch);
+  }
+
+  // הכנה לפגישה בלי AI: מבוסס על המשתתפים והמיילים האחרונים מהם
+  function heuristicPrep(meeting, items) {
+    var people = (meeting.attendees || []).map(function (a) { return String(a).toLowerCase(); });
+    var related = (items || []).filter(function (i) {
+      return i.from && people.indexOf(String(i.from).toLowerCase()) >= 0;
+    });
+    if (related.length) return 'לעבור על "' + related[0].title + '" לפני הפגישה';
+    var ext = (meeting.attendees || []).filter(function (a) { return !/nggconsult\.com$/i.test(a); });
+    if (ext.length) return 'לרענן את ההתכתבות האחרונה עם ' + ext[0].split('@')[1];
+    return 'להגדיר מטרה אחת ותוצר צפוי לפגישה';
+  }
+
+  var api = {
+    DEFAULTS: DEFAULTS, CONTEXTS: CONTEXTS, QUADRANTS: QUADRANTS,
+    hm: hm, fmt: fmt, localParts: localParts, addDays: addDays, graphTime: graphTime,
+    parseToolBlocks: parseToolBlocks, normalizeEvents: normalizeEvents, normalizeEmails: normalizeEmails,
+    isInvite: isInvite, heuristicClassify: heuristicClassify, sanitizeClassification: sanitizeClassification,
+    makeTask: makeTask, ruleMatches: ruleMatches, applyRules: applyRules, settingsFromRules: settingsFromRules,
+    quadrantOf: quadrantOf, recencyBoost: recencyBoost, scoreTask: scoreTask, slotMinutes: slotMinutes,
+    freeWindows: freeWindows, schedule: schedule, replan: replan, markTask: markTask, carryOver: carryOver,
+    parseRuleText: parseRuleText, explainRule: explainRule, isUsableRule: isUsableRule, heuristicPrep: heuristicPrep
+  };
+  root.MorningEngine = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+/*
+ * ממשק "סדר היום": מושך יומן ומיילים מ-Microsoft 365 דרך המחבר של claude.ai,
+ * מסווג בעזרת Claude, משבץ עם MorningEngine ושומר מצב פרטי במסד הנתונים של הדף.
+ */
+(function () {
+  'use strict';
+  var E = window.MorningEngine;
+  var SERVER = 'Microsoft 365';
+  var CFG = E.DEFAULTS;
+
+  var cap = { db: null, mcp: null, sample: null, downloads: null, user: null, permissions: null };
+  var state = {
+    uid: null, me: null, plan: null, rules: [], handled: {},
+    fetchedAt: null, busy: '', pendingRule: null,
+    src: { calendar: 'idle', mail: 'idle', ai: 'idle' }, srcMsg: {}
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- עזרי זמן ----------
+
+  function nowLocal() { return E.localParts(new Date(), CFG.tz); }
+
+  var HE_DATE = new Intl.DateTimeFormat('he-IL', { timeZone: CFG.tz, weekday: 'long', day: 'numeric', month: 'long' });
+  var HE_TIME = new Intl.DateTimeFormat('he-IL', { timeZone: CFG.tz, hour: '2-digit', minute: '2-digit' });
+
+  function relAge(iso) {
+    if (!iso) return '';
+    var h = (Date.now() - new Date(iso).getTime()) / 3600000;
+    if (h < 1) return 'לפני ' + Math.max(1, Math.round(h * 60)) + ' דק\'';
+    if (h < 24) return 'לפני ' + Math.round(h) + ' שע\'';
+    return 'לפני ' + Math.round(h / 24) + ' ימים';
+  }
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  // ---------- אחסון (פרטי לכל משתמשת) ----------
+
+  function docRef(name) { return cap.db.collection('data/users/' + state.uid).doc(name); }
+
+  async function loadState() {
+    if (!cap.db || !state.uid) return;
+    var res = await Promise.allSettled([docRef('plan').get(), docRef('rules').get(), docRef('handled').get()]);
+    if (res[0].status === 'fulfilled' && res[0].value.exists) {
+      var d = res[0].value.data();
+      state.plan = d.plan || null;
+      state.fetchedAt = d.fetchedAt || null;
+    }
+    if (res[1].status === 'fulfilled' && res[1].value.exists) state.rules = res[1].value.data().rules || [];
+    if (res[2].status === 'fulfilled' && res[2].value.exists) state.handled = res[2].value.data().ids || {};
+  }
+
+  var saving = {};
+  function save(name, body) {
+    if (!cap.db || !state.uid) return Promise.resolve();
+    // כתיבה אחת בכל פעם לכל מסמך
+    var prev = saving[name] || Promise.resolve();
+    saving[name] = prev.then(function () { return docRef(name).set(body); }).catch(function (e) {
+      toast('השמירה נכשלה (' + (e && e.code || 'שגיאה') + '). השינוי יישמר בפעולה הבאה.');
+    });
+    return saving[name];
+  }
+
+  function savePlan() { return save('plan', { plan: state.plan, fetchedAt: state.fetchedAt }); }
+  function saveRules() { return save('rules', { rules: state.rules, updatedAt: new Date().toISOString() }); }
+  function saveHandled() {
+    var cutoff = E.addDays(nowLocal().date, -30), ids = {};
+    Object.keys(state.handled).forEach(function (k) { if (state.handled[k] >= cutoff) ids[k] = state.handled[k]; });
+    state.handled = ids;
+    return save('handled', { ids: ids });
+  }
+
+  // ---------- Microsoft 365 ----------
+
+  function mcpMessage(e) {
+    var code = e && e.code;
+    if (code === 'needs_reauth') return 'החיבור ל-Microsoft 365 פג. יש לחבר מחדש ב-claude.ai ← הגדרות ← Connectors.';
+    if (code === 'server_not_connected' || code === 'server_not_found') return 'Microsoft 365 לא מחובר. יש להוסיף אותו ב-claude.ai ← הגדרות ← Connectors.';
+    if (code === 'selection_required') return 'יש יותר מחיבור Microsoft 365 אחד. בחרי אחד בהודעה שהופיעה מעל הדף.';
+    if (code === 'not_in_manifest' || code === 'approval_required' || code === 'consent_required') return 'הדף עוד לא קיבל אישור לקרוא מ-Microsoft 365. אשרי בתפריט ההרשאות.';
+    if (code === 'blocked_by_policy') return 'מדיניות הארגון חוסמת את הקריאה הזו. יש לפנות למנהל המערכת.';
+    if (code === 'not_granted' || code === 'capability_disabled') return 'החיבור לנתונים זמין רק בתוך claude.ai.';
+    if (code === 'server_unavailable') return 'Microsoft 365 לא הגיב. ננסה שוב ברענון הבא.';
+    return 'שגיאה בקריאה מ-Microsoft 365' + (e && e.message ? ': ' + e.message : '');
+  }
+
+  async function call(tool, input) {
+    try {
+      return await cap.mcp.callTool(SERVER, tool, input, { cache: false });
+    } catch (e) {
+      if (e && e.retryable) {
+        await new Promise(function (r) { setTimeout(r, (e.retryAfterMs || 1500) + Math.random() * 800); });
+        return await cap.mcp.callTool(SERVER, tool, input, { cache: false });
+      }
+      throw e;
+    }
+  }
+
+  async function callPaged(tool, input, maxPages) {
+    var all = [], offset = 0;
+    for (var i = 0; i < maxPages; i++) {
+      var r = await call(tool, Object.assign({}, input, { limit: 25, offset: offset }));
+      var p = E.parseToolBlocks(r);
+      all = all.concat(p.items);
+      if (p.nextOffset == null || !p.items.length) break;
+      offset = p.nextOffset;
+    }
+    return all;
+  }
+
+  async function whoAmI() {
+    if (state.me) return state.me;
+    try {
+      var r = await call('get_me', {});
+      var p = r.payload || {};
+      state.me = { email: p.mail || p.userPrincipalName || '', name: p.displayName || '' };
+    } catch (e) { state.me = { email: '', name: '' }; }
+    return state.me;
+  }
+
+  async function fetchCalendar(today) {
+    return callPaged('outlook_calendar_search', {
+      query: '*',
+      afterDateTime: E.addDays(today, -1) + 'T00:00:00',
+      beforeDateTime: E.addDays(today, 1) + 'T23:59:00',
+      order: 'oldest'
+    }, 4);
+  }
+
+  async function fetchMail(today) {
+    return callPaged('outlook_email_search', {
+      afterDateTime: E.addDays(today, -CFG.mailLookbackDays) + 'T00:00:00'
+    }, 3);
+  }
+
+  // ---------- Claude (סיווג, הכנה לפגישות, פירוש כללים) ----------
+
+  function aiNote(ok, msg) {
+    state.src.ai = ok ? 'ok' : 'fallback';
+    if (msg) state.srcMsg.ai = msg;
+  }
+
+  function sampleErr(e) {
+    var c = e && e.code;
+    if (c === 'not_granted') return 'הסיווג החכם לא אושר לדף. מוצג סיווג בסיסי.';
+    if (c === 'rate_limited') return 'הגעת למגבלת השימוש ב-Claude. מוצג סיווג בסיסי.';
+    return 'הסיווג החכם לא זמין כרגע. מוצג סיווג בסיסי.';
+  }
+
+  var CLASSIFY_PROMPT = [
+    'You are the executive assistant of {who}, a consultant at NGG. Triage each incoming item with the Eisenhower matrix and David Allen\'s GTD.',
+    'For every item return:',
+    '- actionable: false when it is informational, an automated notification, a newsletter, or needs nothing from the user.',
+    '- nextAction: the very next physical action, in Hebrew, starting with an infinitive verb (e.g. "להשיב לרחל עם לוח זמנים מעודכן"), at most 12 words.',
+    '- minutes: realistic minutes for that next action only (2-120).',
+    '- context: exactly one of "מחשב", "טלפון", "פגישה", "בחוץ".',
+    '- urgent: true when there is a deadline today or tomorrow, someone is waiting on the user, or delay causes damage.',
+    '- important: true when it advances client work, revenue, management commitments or the user\'s goals.',
+    '- delegateTo: a person or role (from the item) who could do it instead of the user, or null when the user must do it personally.',
+    '- client: the client or organisation the item concerns (from the sender domain or text), or null.',
+    'Reply with only JSON: {"items":[{"id":"...","actionable":true,"nextAction":"...","minutes":15,"context":"מחשב","urgent":false,"important":true,"delegateTo":null,"client":null}]} containing every input id.',
+    'Items:'
+  ].join('\n');
+
+  async function classify(items) {
+    var out = {};
+    if (!items.length) return out;
+    var who = state.me && state.me.email ? (state.me.name + ' <' + state.me.email + '>') : 'the user';
+    if (!cap.sample) {
+      items.forEach(function (i) { out[i.id] = E.heuristicClassify(i); });
+      aiNote(false, 'הסיווג החכם לא זמין בתצוגה הזו. מוצג סיווג בסיסי.');
+      return out;
+    }
+    for (var b = 0; b < items.length; b += 12) {
+      var batch = items.slice(b, b + 12);
+      var data = batch.map(function (i) {
+        return { id: i.id, from: i.from, subject: i.title, snippet: i.snippet, receivedAt: i.receivedAt, importance: i.importance };
+      });
+      try {
+        setBusy('מתעדף ' + Math.min(b + 12, items.length) + ' מתוך ' + items.length + ' פריטים…');
+        var r = await cap.sample.json(CLASSIFY_PROMPT.replace('{who}', who) + '\n' + JSON.stringify(data), { modelTier: 'default' });
+        var byId = {};
+        ((r && r.items) || []).forEach(function (x) { if (x && x.id) byId[x.id] = x; });
+        batch.forEach(function (i) { out[i.id] = E.sanitizeClassification(byId[i.id], i); });
+        aiNote(true);
+      } catch (e) {
+        batch.forEach(function (i) { out[i.id] = E.heuristicClassify(i); });
+        aiNote(false, sampleErr(e));
+      }
+    }
+    return out;
+  }
+
+  async function prepMeetings(meetings, items) {
+    var need = meetings.filter(function (m) { return !m.prep; });
+    if (!need.length) return;
+    need.forEach(function (m) { m.prep = E.heuristicPrep(m, items); });
+    if (!cap.sample) return;
+    var data = need.map(function (m) {
+      return { id: m.id, title: m.title, organizer: m.organizer, attendees: m.attendees.slice(0, 8), location: m.location, time: E.fmt(m.start) };
+    });
+    var mail = items.slice(0, 40).map(function (i) { return { from: i.from, subject: i.title, snippet: i.snippet.slice(0, 120) }; });
+    try {
+      setBusy('מכין שורת הכנה לכל פגישה…');
+      var r = await cap.sample.json([
+        'For each meeting today write ONE short Hebrew line (max 14 words) telling the user what to prepare beforehand.',
+        'Be concrete: name the document, figure, decision or open question to bring, using the recent emails when they relate to the meeting\'s subject or attendees.',
+        'For a routine internal sync, name the one update to bring. Do not invent facts that are not in the data.',
+        'Reply with only JSON: {"preps":[{"id":"...","prep":"..."}]}',
+        'Meetings: ' + JSON.stringify(data),
+        'Recent emails: ' + JSON.stringify(mail)
+      ].join('\n'), { modelTier: 'default' });
+      ((r && r.preps) || []).forEach(function (p) {
+        var m = need.find(function (x) { return x.id === p.id; });
+        if (m && typeof p.prep === 'string' && p.prep.trim()) m.prep = p.prep.trim().slice(0, 140);
+      });
+    } catch (e) { aiNote(false, sampleErr(e)); }
+  }
+
+  var TIME = /^\d{2}:\d{2}$/;
+  function cleanRule(r) {
+    if (!r || typeof r !== 'object') return null;
+    var strs = function (a) { return Array.isArray(a) ? a.filter(function (x) { return typeof x === 'string' && x.trim(); }).map(function (x) { return x.trim(); }).slice(0, 10) : undefined; };
+    var m = r.match || {}, e = r.effect || {};
+    var match = {
+      keywords: strs(m.keywords), senders: strs(m.senders),
+      contexts: (strs(m.contexts) || []).filter(function (c) { return E.CONTEXTS.indexOf(c) >= 0; }),
+      quadrants: (strs(m.quadrants) || []).filter(function (q) { return /^Q[1-4]$/.test(q); }),
+      maxMinutes: Number(m.maxMinutes) || undefined, minMinutes: Number(m.minMinutes) || undefined,
+      all: m.all === true || undefined
+    };
+    var effect = {};
+    if (typeof e.priority === 'number' && isFinite(e.priority)) effect.priority = Math.max(-100, Math.min(300, e.priority));
+    if (typeof e.urgent === 'boolean') effect.urgent = e.urgent;
+    if (typeof e.important === 'boolean') effect.important = e.important;
+    if (e.window && (TIME.test(e.window.start) || TIME.test(e.window.end))) {
+      effect.window = { start: TIME.test(e.window.start) ? e.window.start : null, end: TIME.test(e.window.end) ? e.window.end : null };
+    }
+    if (Number(e.minutes) > 0) effect.minutes = Math.min(240, Math.round(Number(e.minutes)));
+    if (E.CONTEXTS.indexOf(e.context) >= 0) effect.context = e.context;
+    if (typeof e.delegateTo === 'string' && e.delegateTo.trim()) effect.delegateTo = e.delegateTo.trim().slice(0, 60);
+    if (e.skip === true) effect.skip = true;
+    if (e.settings && typeof e.settings === 'object') {
+      var s = {};
+      if (TIME.test(e.settings.dayStart)) s.dayStart = e.settings.dayStart;
+      if (TIME.test(e.settings.dayEnd)) s.dayEnd = e.settings.dayEnd;
+      if (Number(e.settings.bufferMin) >= 0 && e.settings.bufferMin !== null && e.settings.bufferMin !== undefined) s.bufferMin = Math.min(30, Number(e.settings.bufferMin));
+      if (Object.keys(s).length) effect.settings = s;
+    }
+    Object.keys(match).forEach(function (k) { if (match[k] === undefined || (Array.isArray(match[k]) && !match[k].length)) delete match[k]; });
+    var rule = { match: match, effect: effect };
+    rule.explain = (typeof r.explain === 'string' && r.explain.trim()) ? r.explain.trim().slice(0, 160) : E.explainRule(rule);
+    return E.isUsableRule(rule) ? rule : null;
+  }
+
+  async function interpretRule(text) {
+    if (cap.sample) {
+      try {
+        var r = await cap.sample.json([
+          'Convert the user\'s scheduling instruction (Hebrew) into a JSON rule for her daily planner.',
+          'Schema: {"match":{"keywords":[string],"senders":[string],"contexts":["מחשב"|"טלפון"|"פגישה"|"בחוץ"],"quadrants":["Q1"|"Q2"|"Q3"|"Q4"],"maxMinutes":number,"minMinutes":number,"all":boolean},',
+          '"effect":{"priority":number,"urgent":boolean,"important":boolean,"window":{"start":"HH:MM","end":"HH:MM"},"minutes":number,"context":string,"delegateTo":string,"skip":boolean,"settings":{"dayStart":"HH:MM","dayEnd":"HH:MM","bufferMin":number}},',
+          '"explain":"one short Hebrew sentence saying what the rule does"}',
+          'Omit fields that do not apply. priority ranges -100..300; 200 means top of the day, 40 a moderate boost, negative pushes later.',
+          'Day parts: בוקר 08:00-12:00, צהריים 12:00-15:00, אחה"צ 14:00-18:00, ערב 17:00-21:00.',
+          'keywords are short distinctive terms (client or project name); add the English spelling or email domain when obvious. Quadrants: Q1 urgent+important, Q2 important, Q3 urgent only, Q4 neither.',
+          'For working hours use effect.settings with match.all=true.',
+          'Instruction: ' + JSON.stringify(text),
+          'Reply with only the JSON object.'
+        ].join('\n'), { modelTier: 'default', cache: false });
+        var c = cleanRule(r);
+        if (c) return c;
+      } catch (e) { /* ננסה פירוש בסיסי */ }
+    }
+    var h = E.parseRuleText(text);
+    return E.isUsableRule(h) ? cleanRule(h) : null;
+  }
+
+  async function extractPasted(text) {
+    var lines = text.split(/\n+/).map(function (l) { return l.trim(); }).filter(Boolean);
+    if (cap.sample) {
+      try {
+        var r = await cap.sample.json([
+          'The user pasted messages (WhatsApp, Teams or notes). Extract only the action items that are hers to do.',
+          'For each: {"title": short Hebrew title, "from": who asked or null, "nextAction": Hebrew infinitive next action, "minutes": 2-120, "context": "מחשב"|"טלפון"|"פגישה"|"בחוץ", "urgent": boolean, "important": boolean, "delegateTo": string|null, "client": string|null}.',
+          'Reply with only JSON: {"tasks":[...]}. Return {"tasks":[]} if nothing is actionable.',
+          'Text:\n' + text.slice(0, 12000)
+        ].join('\n'), { modelTier: 'default', cache: false });
+        if (r && Array.isArray(r.tasks)) {
+          return r.tasks.slice(0, 30).map(function (t) {
+            var item = { id: 'manual:' + uid(), source: 'paste', title: String(t.title || t.nextAction || 'משימה').slice(0, 120), from: t.from || '', snippet: '', receivedAt: new Date().toISOString(), link: '' };
+            return E.makeTask(item, E.sanitizeClassification(t, item));
+          });
+        }
+      } catch (e) { /* גיבוי: שורה = משימה */ }
+    }
+    return lines.slice(0, 30).map(function (l) {
+      var item = { id: 'manual:' + uid(), source: 'manual', title: l.slice(0, 120), from: '', snippet: '', receivedAt: new Date().toISOString(), link: '' };
+      var c = E.heuristicClassify(item);
+      c.nextAction = l.slice(0, 160);
+      c.important = true;
+      return E.makeTask(item, c);
+    });
+  }
+
+  // ---------- בניית היום ----------
+
+  function replanNow() {
+    if (!state.plan) return;
+    var n = nowLocal();
+    var from = state.plan.date === n.date ? n.min : 0;
+    state.plan = E.replan(state.plan, state.rules, { nowMs: Date.now(), fromMin: from, cfg: CFG });
+  }
+
+  async function buildDay() {
+    if (state.busy) return;
+    var today = nowLocal().date;
+    var prev = state.plan;
+    var sameDay = prev && prev.date === today;
+    var base = sameDay ? prev.tasks.slice() : E.carryOver(prev);
+    setBusy('מושך את היומן והמיילים מ-Outlook…');
+
+    var meetings = sameDay ? prev.meetings : [], allDay = sameDay ? (prev.allDay || []) : [];
+    var emails = [];
+    if (cap.mcp) {
+      await whoAmI();
+      var res = await Promise.allSettled([fetchCalendar(today), fetchMail(today)]);
+      if (res[0].status === 'fulfilled') {
+        var ev = E.normalizeEvents(res[0].value, today, CFG);
+        var oldPrep = {};
+        (meetings || []).forEach(function (m) { if (m.prep) oldPrep[m.id] = m.prep; });
+        ev.meetings.forEach(function (m) { if (oldPrep[m.id]) m.prep = oldPrep[m.id]; });
+        meetings = ev.meetings; allDay = ev.allDay;
+        state.src.calendar = 'ok'; delete state.srcMsg.calendar;
+      } else { state.src.calendar = 'error'; state.srcMsg.calendar = mcpMessage(res[0].reason); }
+      if (res[1].status === 'fulfilled') {
+        emails = E.normalizeEmails(res[1].value, state.me && state.me.email);
+        state.src.mail = 'ok'; delete state.srcMsg.mail;
+      } else { state.src.mail = 'error'; state.srcMsg.mail = mcpMessage(res[1].reason); }
+    } else {
+      state.src.calendar = state.src.mail = 'error';
+      state.srcMsg.calendar = state.srcMsg.mail = 'החיבור ל-Outlook זמין רק כשהדף פתוח בתוך claude.ai.';
+    }
+
+    var known = {};
+    base.forEach(function (t) { known[t.id] = true; });
+    var fresh = emails.filter(function (m) { return !known[m.id] && !state.handled[m.id]; });
+    var cls = await classify(fresh);
+    var newTasks = fresh.map(function (m) { return E.makeTask(m, cls[m.id] || E.heuristicClassify(m)); });
+
+    await prepMeetings(meetings, emails);
+
+    state.plan = { date: today, meetings: meetings, allDay: allDay, tasks: base.concat(newTasks) };
+    state.fetchedAt = new Date().toISOString();
+    replanNow();
+    setBusy('');
+    render();
+    savePlan();
+  }
+
+  // ---------- פעולות משתמשת ----------
+
+  function mark(id, status) {
+    var n = nowLocal();
+    state.plan = E.markTask(state.plan, id, status, n.min);
+    if (status === 'done' || status === 'dismissed') { state.handled[id] = n.date; saveHandled(); }
+    if (status === 'pending') { delete state.handled[id]; saveHandled(); }
+    replanNow();
+    render();
+    savePlan();
+    var t = state.plan.tasks.find(function (x) { return x.id === id; });
+    if (status === 'missed' && t) {
+      toast(t.placement === 'today' ? 'הועבר ל-' + E.fmt(t.start) + '. שאר היום סודר מחדש.' : 'אין חלון פנוי היום. המשימה עברה למחר.');
+    } else if (status === 'done') toast('סומן כבוצע. שאר היום סודר מחדש.');
+  }
+
+  function force(id) {
+    state.plan.tasks = state.plan.tasks.map(function (t) { return t.id === id ? Object.assign({}, t, { forced: true }) : t; });
+    replanNow(); render(); savePlan();
+  }
+
+  async function onRuleSubmit(ev) {
+    ev.preventDefault();
+    var text = $('rule-text').value.trim();
+    if (!text) return;
+    $('rule-submit').disabled = true;
+    $('rule-preview').hidden = false;
+    $('rule-preview').innerHTML = '<p class="muted">מפרש את הכלל…</p>';
+    var rule = await interpretRule(text);
+    $('rule-submit').disabled = false;
+    if (!rule) {
+      state.pendingRule = null;
+      $('rule-preview').innerHTML = '<p class="warn">לא הצלחתי להבין את הכלל. נסי לנסח עם נושא ופעולה, למשל: "כל מה שקשור ללקוח X הכי דחוף" או "שיחות טלפון רק אחה"צ".</p>';
+      return;
+    }
+    rule.text = text;
+    state.pendingRule = rule;
+    var box = $('rule-preview');
+    box.innerHTML = '';
+    var p = el('p', 'rule-explain', 'הבנתי: ' + rule.explain);
+    var row = el('div', 'row');
+    var ok = el('button', 'btn primary', 'שמירת הכלל');
+    ok.type = 'button';
+    ok.onclick = confirmRule;
+    var no = el('button', 'btn ghost', 'ביטול');
+    no.type = 'button';
+    no.onclick = function () { state.pendingRule = null; box.hidden = true; };
+    row.append(ok, no);
+    box.append(p, row);
+  }
+
+  function confirmRule() {
+    var r = state.pendingRule;
+    if (!r) return;
+    r.id = 'rule-' + uid();
+    r.active = true;
+    r.createdAt = new Date().toISOString();
+    state.rules = state.rules.concat([r]);
+    state.pendingRule = null;
+    $('rule-text').value = '';
+    $('rule-preview').hidden = true;
+    saveRules();
+    replanNow(); render(); savePlan();
+    toast('הכלל נשמר והוחל על היום. הוא יופעל מחדש בכל בוקר.');
+  }
+
+  function toggleRule(id) {
+    // כללים לא נמחקים – רק מושבתים, כדי לשמור תיעוד מלא
+    state.rules = state.rules.map(function (r) { return r.id === id ? Object.assign({}, r, { active: r.active === false }) : r; });
+    saveRules();
+    replanNow(); render(); savePlan();
+  }
+
+  async function exportRules() {
+    if (!cap.downloads) return;
+    try {
+      await cap.downloads.save({ filename: 'morning-rules.json', data: JSON.stringify({ rules: state.rules }, null, 2) });
+    } catch (e) {
+      if (e && e.code !== 'declined') toast('ההורדה לא זמינה כרגע.');
+    }
+  }
+
+  async function onPasteSubmit(ev) {
+    ev.preventDefault();
+    var text = $('paste-text').value.trim();
+    if (!text || !state.plan) return;
+    $('paste-submit').disabled = true;
+    setBusy('מחלץ משימות מהטקסט…');
+    var tasks = await extractPasted(text);
+    setBusy('');
+    $('paste-submit').disabled = false;
+    if (!tasks.length) { toast('לא נמצאו משימות בטקסט.'); return; }
+    $('paste-text').value = '';
+    state.plan.tasks = state.plan.tasks.concat(tasks);
+    replanNow(); render(); savePlan();
+    toast('נוספו ' + tasks.length + ' משימות ושובצו בלו"ז.');
+  }
+
+  // ---------- תצוגה ----------
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function chip(text, cls) { return el('span', 'chip ' + (cls || ''), text); }
+
+  function safeLink(href, label) {
+    if (!/^https:\/\//.test(href || '')) return null;
+    var a = el('a', 'open', label);
+    a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    return a;
+  }
+
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 4200);
+  }
+
+  function setBusy(msg) {
+    state.busy = msg;
+    $('busy').hidden = !msg;
+    $('busy-text').textContent = msg;
+    $('refresh').disabled = !!msg;
+  }
+
+  function taskRow(t, n) {
+    var li = el('li', 'item task q-' + t.quadrant + (t.status === 'done' ? ' is-done' : ''));
+    var time = el('div', 'time');
+    time.append(el('b', '', t.start != null ? E.fmt(t.start) : '—'), el('span', '', t.end != null ? E.fmt(t.end) : ''));
+    var body = el('div', 'body');
+    var title = el('div', 'title', t.nextAction || t.title);
+    var sub = el('div', 'sub');
+    var srcLabel = t.source === 'mail' ? 'מייל' : t.source === 'paste' ? 'הודבק' : 'ידני';
+    sub.textContent = srcLabel + (t.from ? ' · ' + t.from : '') + (t.title && t.nextAction ? ' · ' + t.title : '') + (t.receivedAt && t.source === 'mail' ? ' · ' + relAge(t.receivedAt) : '');
+    var chips = el('div', 'chips');
+    chips.append(chip(E.QUADRANTS[t.quadrant].label, 'q'), chip(t.context), chip(t.minutes + ' דק\''));
+    if (t.minutes <= 2) chips.append(chip('פחות משתי דקות', 'note'));
+    if (t.delegateTo) chips.append(chip('להאציל ל' + t.delegateTo, 'deleg'));
+    if (t.client) chips.append(chip(t.client));
+    if (t.carried) chips.append(chip(t.missedCount ? 'נדחה ' + t.missedCount + '×' : 'מאתמול', 'note'));
+    if (t.appliedRules && t.appliedRules.length) chips.append(chip('כלל', 'rule'));
+    body.append(title, sub, chips);
+    var link = safeLink(t.link, 'פתיחה ב-Outlook');
+    if (link) body.append(link);
+
+    var acts = el('div', 'acts');
+    if (t.status === 'done') {
+      var undo = el('button', 'btn ghost small', 'ביטול סימון');
+      undo.onclick = function () { mark(t.id, 'pending'); };
+      acts.append(el('span', 'done-mark', '✓ בוצע'), undo);
+    } else {
+      var d = el('button', 'btn ok small', 'בוצע');
+      d.setAttribute('aria-label', 'סימון כבוצע: ' + (t.nextAction || t.title));
+      d.onclick = function () { mark(t.id, 'done'); };
+      var m = el('button', 'btn miss small', 'לא בוצע');
+      m.setAttribute('aria-label', 'סימון כלא בוצע: ' + (t.nextAction || t.title));
+      m.onclick = function () { mark(t.id, 'missed'); };
+      var x = el('button', 'btn ghost small', 'לא רלוונטי');
+      x.onclick = function () { mark(t.id, 'dismissed'); };
+      acts.append(d, m, x);
+      if (t.start != null && t.end <= n.min && state.plan.date === n.date) li.classList.add('overdue');
+    }
+    li.append(time, body, acts);
+    return li;
+  }
+
+  function meetingRow(m) {
+    var li = el('li', 'item meeting' + (m.tentative ? ' tentative' : ''));
+    var time = el('div', 'time');
+    time.append(el('b', '', E.fmt(m.start)), el('span', '', E.fmt(m.end)));
+    var body = el('div', 'body');
+    body.append(el('div', 'title', m.title));
+    var prep = el('div', 'prep');
+    prep.append(el('span', 'prep-k', 'להכנה'), document.createTextNode(m.prep || 'להגדיר מטרה ותוצר צפוי'));
+    body.append(prep);
+    var sub = el('div', 'sub', (m.attendees.length ? m.attendees.length + ' משתתפים' : '') + (m.location ? ' · ' + m.location : '') + (m.tentative ? ' · טנטטיבי' : ''));
+    body.append(sub);
+    var link = safeLink(m.link, 'פתיחה ביומן');
+    if (link) body.append(link);
+    li.append(time, body, el('div', 'acts'));
+    return li;
+  }
+
+  function render() {
+    var n = nowLocal();
+    $('today').textContent = HE_DATE.format(new Date());
+    $('updated').textContent = state.fetchedAt ? 'עודכן ' + HE_TIME.format(new Date(state.fetchedAt)) : 'עוד לא עודכן היום';
+
+    renderSources();
+    renderRules();
+
+    var plan = state.plan;
+    var list = $('timeline');
+    list.innerHTML = '';
+    if (!plan) {
+      $('empty').hidden = false;
+      $('summary').hidden = true;
+      $('later').hidden = true;
+      return;
+    }
+    $('empty').hidden = true;
+
+    var today = plan.tasks.filter(function (t) { return t.start != null && t.status !== 'dismissed'; });
+    var tomorrow = plan.tasks.filter(function (t) { return t.placement === 'tomorrow' && t.status === 'pending'; });
+    var deferred = plan.tasks.filter(function (t) { return t.placement === 'deferred' && t.status === 'pending'; });
+    var done = plan.tasks.filter(function (t) { return t.status === 'done'; }).length;
+
+    // סיכום + מטריצה
+    $('summary').hidden = false;
+    $('s-meetings').textContent = plan.meetings.length;
+    $('s-tasks').textContent = today.length;
+    $('s-done').textContent = done;
+    $('s-tomorrow').textContent = tomorrow.length;
+    var counts = { Q1: 0, Q2: 0, Q3: 0, Q4: 0 };
+    plan.tasks.forEach(function (t) { if (t.status === 'pending' && counts[t.quadrant] != null) counts[t.quadrant]++; });
+    Object.keys(counts).forEach(function (q) { $('m-' + q).textContent = counts[q]; });
+    var cfg = plan.cfg || CFG;
+    $('hours').textContent = cfg.dayStart + '–' + cfg.dayEnd;
+
+    if (plan.allDay && plan.allDay.length) {
+      var ad = el('li', 'item allday');
+      ad.append(el('div', 'time', 'כל היום'), el('div', 'body', plan.allDay.map(function (a) { return a.title; }).join(' · ')), el('div', 'acts'));
+      list.append(ad);
+    }
+
+    var rows = plan.meetings.map(function (m) { return { at: m.start, end: m.end, node: function () { return meetingRow(m); } }; })
+      .concat(today.map(function (t) { return { at: t.start, end: t.end, node: function () { return taskRow(t, n); } }; }))
+      .sort(function (a, b) { return a.at - b.at || a.end - b.end; });
+
+    var nowPlaced = plan.date !== n.date;
+    rows.forEach(function (r) {
+      if (!nowPlaced && r.at > n.min) {
+        list.append(nowLine(n.min));
+        nowPlaced = true;
+      }
+      list.append(r.node());
+    });
+    if (!nowPlaced) list.append(nowLine(n.min));
+    if (!rows.length) list.append(el('li', 'item none', 'אין פגישות או משימות משובצות להיום.'));
+
+    // מחר ונדחה
+    $('later').hidden = !(tomorrow.length || deferred.length);
+    fillSimple('tomorrow-list', tomorrow, false);
+    fillSimple('deferred-list', deferred, true);
+    $('tomorrow-wrap').hidden = !tomorrow.length;
+    $('deferred-wrap').hidden = !deferred.length;
+  }
+
+  function nowLine(min) {
+    var li = el('li', 'now');
+    li.append(el('span', '', 'עכשיו ' + E.fmt(min)));
+    return li;
+  }
+
+  function fillSimple(id, tasks, canForce) {
+    var ul = $(id);
+    ul.innerHTML = '';
+    tasks.slice(0, 40).forEach(function (t) {
+      var li = el('li', 'mini');
+      var txt = el('div', 'mini-t');
+      txt.append(el('b', '', t.nextAction || t.title), el('span', 'muted', (t.from ? t.from + ' · ' : '') + E.QUADRANTS[t.quadrant].label + ' · ' + t.minutes + ' דק\''));
+      var acts = el('div', 'acts');
+      if (canForce) {
+        var f = el('button', 'btn ghost small', 'לשבץ היום');
+        f.onclick = function () { force(t.id); };
+        acts.append(f);
+      }
+      var x = el('button', 'btn ghost small', canForce ? 'סגירה' : 'לא רלוונטי');
+      x.onclick = function () { mark(t.id, 'dismissed'); };
+      acts.append(x);
+      li.append(txt, acts);
+      ul.append(li);
+    });
+  }
+
+  function renderSources() {
+    var S = [
+      ['calendar', 'יומן Outlook'],
+      ['mail', 'מייל Outlook'],
+      ['ai', 'תעדוף חכם (Claude)']
+    ];
+    var ul = $('sources');
+    ul.innerHTML = '';
+    S.forEach(function (s) {
+      var st = state.src[s[0]];
+      var li = el('li', 'src st-' + st);
+      var label = st === 'ok' ? 'מחובר' : st === 'error' ? 'לא זמין' : st === 'fallback' ? 'בסיסי' : 'ממתין';
+      li.append(el('span', 'dot'), el('b', '', s[1]), el('span', 'st', label));
+      if (state.srcMsg[s[0]]) li.append(el('p', 'src-msg', state.srcMsg[s[0]]));
+      ul.append(li);
+    });
+    var wa = el('li', 'src st-manual');
+    wa.append(el('span', 'dot'), el('b', '', 'וואטסאפ'), el('span', 'st', 'הדבקה ידנית'));
+    wa.append(el('p', 'src-msg', 'אין חיבור רשמי לקריאת וואטסאפ אישי. הדביקי הודעות בתיבה "הוספת משימות".'));
+    var todo = el('li', 'src st-manual');
+    todo.append(el('span', 'dot'), el('b', '', 'רשימת משימות'), el('span', 'st', 'בתוך האפליקציה'));
+    todo.append(el('p', 'src-msg', 'המחבר של Microsoft 365 לא חושף את Microsoft To Do. משימות נוספות כאן.'));
+    ul.append(wa, todo);
+    $('perm-btn').hidden = !(cap.permissions && (state.src.calendar === 'error' || state.src.mail === 'error' || state.src.ai === 'fallback'));
+  }
+
+  function renderRules() {
+    var ul = $('rules');
+    ul.innerHTML = '';
+    $('rules-empty').hidden = state.rules.length > 0;
+    state.rules.slice().reverse().forEach(function (r) {
+      var li = el('li', 'rule' + (r.active === false ? ' off' : ''));
+      var txt = el('div', 'rule-body');
+      txt.append(el('b', '', '"' + r.text + '"'), el('span', 'muted', r.explain || E.explainRule(r)));
+      var b = el('button', 'btn ghost small', r.active === false ? 'הפעלה' : 'השבתה');
+      b.onclick = function () { toggleRule(r.id); };
+      li.append(txt, b);
+      ul.append(li);
+    });
+    $('export').hidden = !cap.downloads || !state.rules.length;
+  }
+
+  // ---------- הפעלה ----------
+
+  async function boot() {
+    document.documentElement.setAttribute('dir', 'rtl');
+    document.documentElement.setAttribute('lang', 'he');
+    render();
+    $('rule-form').addEventListener('submit', onRuleSubmit);
+    $('paste-form').addEventListener('submit', onPasteSubmit);
+    $('refresh').addEventListener('click', function () { buildDay(); });
+    $('export').addEventListener('click', exportRules);
+    $('perm-btn').addEventListener('click', function () { cap.permissions && cap.permissions.manage().catch(function () {}); });
+
+    if (!window.claude || !window.claude.use) {
+      $('empty-text').textContent = 'האפליקציה עובדת רק כשהיא פתוחה בתוך claude.ai, שם יש לה גישה ל-Outlook.';
+      return;
+    }
+    var names = ['db', 'mcp', 'sample', 'downloads', 'user', 'permissions'];
+    var got = await Promise.all(names.map(function (n) { return window.claude.use(n).catch(function () { return null; }); }));
+    names.forEach(function (n, i) { cap[n] = got[i]; });
+
+    if (cap.user) { try { state.uid = await cap.user.id(); } catch (e) { state.uid = null; } }
+    if (!cap.db || !state.uid) toast('השמירה לא זמינה בתצוגה הזו. הלו"ז יחושב, אבל סימונים וכללים לא יישמרו.');
+    await loadState();
+    render();
+
+    var n = nowLocal();
+    if (!state.plan || state.plan.date !== n.date) await buildDay();
+    else {
+      // אותו יום: לרענן אם עברה יותר משעה מהמשיכה האחרונה
+      var stale = !state.fetchedAt || Date.now() - new Date(state.fetchedAt).getTime() > 3600000;
+      if (stale) await buildDay(); else { replanNow(); render(); }
+    }
+
+    // בדיקה כל דקה: קו "עכשיו", ובניית יום חדש אוטומטית בבוקר
+    setInterval(function () {
+      var cur = nowLocal();
+      if (state.plan && state.plan.date !== cur.date && cur.min >= E.hm('05:00') && !document.hidden) buildDay();
+      else if (!state.busy) render();
+    }, 60000);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && state.plan && state.plan.date !== nowLocal().date) buildDay();
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+
+</script>

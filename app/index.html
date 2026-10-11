@@ -1,0 +1,230 @@
+<title>סדר היום של נועה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Rubik:wght@500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* פריסה: ציר זמן יומי אנכי (שעה | פריט | פעולות) לצד עמודת בקרה – כללים, מקורות והוספת משימות */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --ink: #18221f;
+  --muted: #5b6a66;
+  --line: #d9e1de;
+  --accent: #1d6b5c;
+  --accent-ink: #ffffff;
+  --meeting: #34508a;
+  --meeting-bg: #eef2fa;
+  --q1: #b4321f;
+  --q2: #1d6b5c;
+  --q3: #a8650a;
+  --q4: #7b8582;
+  --ok: #1f7a3d;
+  --warn: #9a4b00;
+  --now: #c2410c;
+  --chip: #edf1ef;
+  --font-display: "Rubik", "Assistant", "Segoe UI", Arial, sans-serif;
+  --font-body: "Assistant", "Segoe UI", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101614; --surface: #17201d; --ink: #e5ece9; --muted: #98a8a3; --line: #2a3632;
+    --accent: #5fbfa9; --accent-ink: #0c1311; --meeting: #9db3ea; --meeting-bg: #1b2333;
+    --q1: #f08a76; --q2: #5fbfa9; --q3: #e0a64a; --q4: #8d9894; --ok: #6fcf8e; --warn: #f0a35a;
+    --now: #fb923c; --chip: #223029; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101614; --surface: #17201d; --ink: #e5ece9; --muted: #98a8a3; --line: #2a3632;
+  --accent: #5fbfa9; --accent-ink: #0c1311; --meeting: #9db3ea; --meeting-bg: #1b2333;
+  --q1: #f08a76; --q2: #5fbfa9; --q3: #e0a64a; --q4: #8d9894; --ok: #6fcf8e; --warn: #f0a35a;
+  --now: #fb923c; --chip: #223029; color-scheme: dark;
+}
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 20px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; }
+h1 { font-size: 1.7rem; }
+h2 { font-size: 1.05rem; }
+.muted { color: var(--muted); }
+.warn { color: var(--warn); margin: 0; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.eyebrow { font-size: .78rem; letter-spacing: .04em; color: var(--muted); }
+.top-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.btn { font: inherit; font-weight: 600; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 8px 14px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn:focus-visible, a:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.small { padding: 4px 10px; font-size: .85rem; }
+.btn.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.btn.miss { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+.btn.ghost { background: transparent; }
+
+.busy { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .92rem; }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.4fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.stat { background: var(--surface); padding: 12px 14px; display: grid; gap: 2px; }
+.stat b { font-family: var(--font-mono); font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.stat span { font-size: .82rem; color: var(--muted); }
+.matrix { background: var(--surface); padding: 10px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: .82rem; align-content: center; }
+.matrix div { display: flex; justify-content: space-between; gap: 8px; border-inline-start: 3px solid var(--qc); padding-inline-start: 6px; }
+.matrix b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+@media (max-width: 880px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .matrix { grid-column: 1 / -1; }
+}
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+
+ol.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.item { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); align-items: start; }
+.item:first-child { border-top: 0; }
+.time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; display: grid; font-size: .95rem; }
+.time span { color: var(--muted); font-size: .8rem; }
+.body { min-width: 0; display: grid; gap: 4px; }
+.title { font-weight: 700; overflow-wrap: anywhere; }
+.sub { font-size: .84rem; color: var(--muted); overflow-wrap: anywhere; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: .76rem; padding: 1px 8px; border-radius: 999px; background: var(--chip); color: var(--muted); }
+.chip.q { color: var(--qc); background: color-mix(in srgb, var(--qc) 12%, transparent); font-weight: 600; }
+.chip.deleg { color: var(--q3); }
+.chip.rule { color: var(--accent); }
+.acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+a.open { font-size: .82rem; color: var(--accent); width: fit-content; }
+
+@media (max-width: 560px) {
+  .item { grid-template-columns: 50px minmax(0, 1fr); }
+  .item .acts { grid-column: 2; justify-content: flex-start; }
+  .item .acts:empty { display: none; }
+}
+.task { border-inline-start: 4px solid var(--qc); padding-inline-start: 10px; }
+.q-Q1 { --qc: var(--q1); } .q-Q2 { --qc: var(--q2); } .q-Q3 { --qc: var(--q3); } .q-Q4 { --qc: var(--q4); }
+.task.is-done .title { text-decoration: line-through; color: var(--muted); }
+.task.overdue { background: color-mix(in srgb, var(--warn) 7%, transparent); }
+.done-mark { color: var(--ok); font-weight: 700; font-size: .9rem; }
+
+.meeting { background: var(--meeting-bg); border-inline-start: 4px solid var(--meeting); padding-inline: 10px; border-radius: 6px; margin-block: 4px; border-top: 0; }
+.meeting .title { color: var(--meeting); }
+.meeting.tentative { border-inline-start-style: dashed; }
+.prep { font-size: .9rem; }
+.prep-k { font-size: .72rem; font-weight: 700; letter-spacing: .04em; color: var(--meeting); margin-inline-end: 8px; }
+.allday .body { color: var(--muted); }
+.none { color: var(--muted); grid-template-columns: 1fr; }
+
+.now { list-style: none; display: flex; align-items: center; gap: 8px; color: var(--now); font-family: var(--font-mono); font-size: .78rem; padding-block: 4px; }
+.now::after { content: ""; flex: 1; height: 2px; background: var(--now); border-radius: 2px; }
+
+ul.plain { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mini { display: flex; justify-content: space-between; gap: 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 8px; }
+.mini-t { min-width: 0; display: grid; font-size: .9rem; }
+.mini-t span { font-size: .8rem; }
+
+.src { display: grid; grid-template-columns: 10px 1fr auto; gap: 2px 8px; align-items: center; font-size: .9rem; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--q4); }
+.st-ok .dot { background: var(--ok); }
+.st-error .dot { background: var(--q1); }
+.st-fallback .dot, .st-manual .dot { background: var(--q3); }
+.st { font-size: .78rem; color: var(--muted); }
+.src-msg { grid-column: 2 / -1; margin: 0; font-size: .8rem; color: var(--muted); }
+
+textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--bg); color: var(--ink); resize: vertical; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.rule { display: flex; justify-content: space-between; gap: 10px; align-items: start; border-top: 1px solid var(--line); padding-top: 8px; }
+.rule-body { display: grid; min-width: 0; font-size: .9rem; overflow-wrap: anywhere; }
+.rule-body span { font-size: .8rem; }
+.rule.off .rule-body { opacity: .55; }
+.rule-explain { margin: 0; font-weight: 600; }
+.preview { background: var(--chip); border-radius: 8px; padding: 10px; display: grid; gap: 8px; }
+.hint { font-size: .8rem; color: var(--muted); margin: 0; }
+
+.empty { text-align: start; color: var(--muted); padding: 24px 0; }
+.toast { position: fixed; inset-inline: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 480px; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: .92rem; box-shadow: 0 6px 20px rgb(0 0 0 / .18); }
+</style>
+
+<div class="wrap" dir="rtl" lang="he">
+  <header class="top">
+    <div>
+      <div class="eyebrow">סדר היום · שעות עבודה <span id="hours">08:30–18:00</span></div>
+      <h1 id="today">היום</h1>
+    </div>
+    <div class="top-actions">
+      <div class="busy" id="busy" hidden><span class="spinner" aria-hidden="true"></span><span id="busy-text"></span></div>
+      <span class="muted" id="updated"></span>
+      <button class="btn primary" id="refresh" type="button">רענון מ-Outlook</button>
+    </div>
+  </header>
+
+  <section class="summary" id="summary" hidden aria-label="סיכום היום">
+    <div class="stat"><b id="s-meetings">0</b><span>פגישות</span></div>
+    <div class="stat"><b id="s-tasks">0</b><span>משימות משובצות</span></div>
+    <div class="stat"><b id="s-done">0</b><span>בוצעו</span></div>
+    <div class="stat"><b id="s-tomorrow">0</b><span>עוברות למחר</span></div>
+    <div class="matrix" aria-label="מטריצת אייזנהאואר – משימות פתוחות">
+      <div class="q-Q1"><span>דחוף וחשוב</span><b id="m-Q1">0</b></div>
+      <div class="q-Q2"><span>חשוב</span><b id="m-Q2">0</b></div>
+      <div class="q-Q3"><span>דחוף – להאציל</span><b id="m-Q3">0</b></div>
+      <div class="q-Q4"><span>לוותר</span><b id="m-Q4">0</b></div>
+    </div>
+  </section>
+
+  <div class="layout">
+    <div style="display:grid;gap:20px;min-width:0">
+      <section class="panel" aria-labelledby="day-h">
+        <div class="panel-head"><h2 id="day-h">הלו"ז</h2><span class="muted" style="font-size:.82rem">סמני "בוצע" או "לא בוצע" – שאר היום יסודר מחדש</span></div>
+        <div class="empty" id="empty"><p id="empty-text">כאן יופיע סדר היום: הפגישות מהיומן, ובין הפגישות משימות מהמיילים, עם שעה לכל משימה ושורת הכנה לכל פגישה. הלו"ז נבנה אוטומטית בפתיחה הראשונה של כל בוקר.</p></div>
+        <ol class="timeline" id="timeline"></ol>
+      </section>
+
+      <section class="panel" id="later" hidden>
+        <div id="tomorrow-wrap">
+          <div class="panel-head"><h2>עובר למחר</h2><span class="muted" style="font-size:.82rem">לא נמצא להן חלון פנוי היום</span></div>
+          <ul class="plain" id="tomorrow-list"></ul>
+        </div>
+        <div id="deferred-wrap">
+          <div class="panel-head"><h2>לא שובץ</h2><span class="muted" style="font-size:.82rem">לא דחוף ולא חשוב, או ללא פעולה נדרשת</span></div>
+          <ul class="plain" id="deferred-list"></ul>
+        </div>
+      </section>
+    </div>
+
+    <aside style="display:grid;gap:20px;min-width:0">
+      <section class="panel" aria-labelledby="rules-h">
+        <div class="panel-head"><h2 id="rules-h">כללים</h2><button class="btn ghost small" id="export" type="button" hidden>הורדת קובץ הכללים</button></div>
+        <form id="rule-form" class="row" style="display:grid;gap:8px">
+          <label for="rule-text" class="hint">כתבי תיקון במילים שלך. הוא יישמר ככלל ויופעל בכל בוקר.</label>
+          <textarea id="rule-text" rows="2" placeholder='למשל: כל מה שקשור ללקוח רש"ת הכי דחוף'></textarea>
+          <div class="row"><button class="btn primary small" id="rule-submit" type="submit">הוספת כלל</button></div>
+        </form>
+        <div class="preview" id="rule-preview" hidden></div>
+        <p class="hint" id="rules-empty">עוד אין כללים. דוגמאות: "שיחות טלפון רק בצהריים", "אני מתחילה לעבוד ב-9", "מיילים מ-iaa.gov.il בעדיפות גבוהה".</p>
+        <ul class="plain" id="rules"></ul>
+      </section>
+
+      <section class="panel" aria-labelledby="paste-h">
+        <h2 id="paste-h">הוספת משימות</h2>
+        <form id="paste-form" style="display:grid;gap:8px">
+          <label for="paste-text" class="hint">הדביקי הודעות מוואטסאפ או מ-Teams, או כתבי משימות בשורות נפרדות.</label>
+          <textarea id="paste-text" rows="4"></textarea>
+          <div class="row"><button class="btn small" id="paste-submit" type="submit">חילוץ ושיבוץ</button></div>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="src-h">
+        <div class="panel-head"><h2 id="src-h">מקורות</h2><button class="btn ghost small" id="perm-btn" type="button" hidden>הרשאות</button></div>
+        <ul class="plain" id="sources"></ul>
+      </section>
+    </aside>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<!--SCRIPTS-->
