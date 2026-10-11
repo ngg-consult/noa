@@ -12,7 +12,8 @@
     dayEnd: '18:00',
     bufferMin: 5,      // מרווח לפני ואחרי כל פגישה
     minSlot: 10,       // חלון קצר מזה לא משמש לשיבוץ
-    mailLookbackDays: 3
+    mailLookbackDays: 3,
+    workDays: [0, 1, 2, 3, 4] // ראשון–חמישי
   };
 
   var CONTEXTS = ['מחשב', 'טלפון', 'פגישה', 'בחוץ'];
@@ -66,6 +67,17 @@
     var d = new Date(dateStr + 'T12:00:00Z');
     d.setUTCDate(d.getUTCDate() + n);
     return d.toISOString().slice(0, 10);
+  }
+
+  // יום העבודה הבא אחרי התאריך הנתון (מדלג על סוף שבוע)
+  function nextWorkday(dateStr, workDays) {
+    var days = workDays || DEFAULTS.workDays;
+    var d = dateStr;
+    for (var i = 0; i < 7; i++) {
+      d = addDays(d, 1);
+      if (days.indexOf(new Date(d + 'T12:00:00Z').getUTCDay()) >= 0) return d;
+    }
+    return addDays(dateStr, 1);
   }
 
   // Graph מחזיר {dateTime, timeZone}; כשהאזור הוא UTC מוסיפים Z.
@@ -597,7 +609,7 @@
 
   var api = {
     DEFAULTS: DEFAULTS, CONTEXTS: CONTEXTS, QUADRANTS: QUADRANTS,
-    hm: hm, fmt: fmt, localParts: localParts, addDays: addDays, graphTime: graphTime,
+    hm: hm, fmt: fmt, localParts: localParts, addDays: addDays, nextWorkday: nextWorkday, graphTime: graphTime,
     parseToolBlocks: parseToolBlocks, normalizeEvents: normalizeEvents, normalizeEmails: normalizeEmails,
     isInvite: isInvite, heuristicClassify: heuristicClassify, sanitizeClassification: sanitizeClassification,
     makeTask: makeTask, ruleMatches: ruleMatches, applyRules: applyRules, settingsFromRules: settingsFromRules,

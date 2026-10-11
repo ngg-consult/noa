@@ -63,6 +63,9 @@ header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-cont
 .btn.miss { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
 .btn.ghost { background: transparent; }
 
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg .btn { border: 0; border-radius: 0; }
+.seg .btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .busy { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .92rem; }
 .spinner { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -154,11 +157,15 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
 <div class="wrap" dir="rtl" lang="he">
   <header class="top">
     <div>
-      <div class="eyebrow">סדר היום · שעות עבודה <span id="hours">08:30–18:00</span></div>
+      <div class="eyebrow"><span id="view-label">היום</span> · שעות עבודה <span id="hours">08:30–18:00</span></div>
       <h1 id="today">היום</h1>
     </div>
     <div class="top-actions">
       <div class="busy" id="busy" hidden><span class="spinner" aria-hidden="true"></span><span id="busy-text"></span></div>
+      <div class="seg" role="group" aria-label="איזה יום להציג">
+        <button class="btn small" id="v-today" type="button" aria-pressed="true">היום</button>
+        <button class="btn small" id="v-next" type="button" aria-pressed="false">מחר</button>
+      </div>
       <span class="muted" id="updated"></span>
       <button class="btn primary" id="refresh" type="button">רענון מ-Outlook</button>
     </div>
@@ -168,7 +175,7 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
     <div class="stat"><b id="s-meetings">0</b><span>פגישות</span></div>
     <div class="stat"><b id="s-tasks">0</b><span>משימות משובצות</span></div>
     <div class="stat"><b id="s-done">0</b><span>בוצעו</span></div>
-    <div class="stat"><b id="s-tomorrow">0</b><span>עוברות למחר</span></div>
+    <div class="stat"><b id="s-tomorrow">0</b><span id="l-tomorrow">עוברות למחר</span></div>
     <div class="matrix" aria-label="מטריצת אייזנהאואר – משימות פתוחות">
       <div class="q-Q1"><span>דחוף וחשוב</span><b id="m-Q1">0</b></div>
       <div class="q-Q2"><span>חשוב</span><b id="m-Q2">0</b></div>
@@ -181,13 +188,14 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
     <div style="display:grid;gap:20px;min-width:0">
       <section class="panel" aria-labelledby="day-h">
         <div class="panel-head"><h2 id="day-h">הלו"ז</h2><span class="muted" style="font-size:.82rem">סמני "בוצע" או "לא בוצע" – שאר היום יסודר מחדש</span></div>
+        <p class="hint" id="next-note" hidden>תצוגת הכנה: הפגישות מהיומן, ובין הפגישות כל מה שעוד פתוח. הלו"ז ייבנה מחדש בבוקר עם המיילים החדשים.</p>
         <div class="empty" id="empty"><p id="empty-text">כאן יופיע סדר היום: הפגישות מהיומן, ובין הפגישות משימות מהמיילים, עם שעה לכל משימה ושורת הכנה לכל פגישה. הלו"ז נבנה אוטומטית בפתיחה הראשונה של כל בוקר.</p></div>
         <ol class="timeline" id="timeline"></ol>
       </section>
 
       <section class="panel" id="later" hidden>
         <div id="tomorrow-wrap">
-          <div class="panel-head"><h2>עובר למחר</h2><span class="muted" style="font-size:.82rem">לא נמצא להן חלון פנוי היום</span></div>
+          <div class="panel-head"><h2 id="h-tomorrow">עובר למחר</h2><span class="muted" style="font-size:.82rem">לא נמצא להן חלון פנוי היום</span></div>
           <ul class="plain" id="tomorrow-list"></ul>
         </div>
         <div id="deferred-wrap">

@@ -12,6 +12,7 @@
   var state = {
     uid: null, me: null, plan: null, rules: [], handled: {},
     fetchedAt: null, busy: '', pendingRule: null,
+    view: null, preview: null, previewFetchedAt: null,
     src: { calendar: 'idle', mail: 'idle', ai: 'idle' }, srcMsg: {}
   };
 
@@ -32,6 +33,17 @@
     return 'לפני ' + Math.round(h / 24) + ' ימים';
   }
 
+  // אחרי סוף יום העבודה מוצג אוטומטית יום העבודה הבא
+  function dayCfg() { return E.settingsFromRules(state.rules, CFG); }
+  function nextDate() { return E.nextWorkday(nowLocal().date); }
+  function isEvening() { return nowLocal().min >= E.hm(dayCfg().dayEnd); }
+  function activeView() { return state.view || (isEvening() ? 'next' : 'today'); }
+  var HE_WEEKDAY = new Intl.DateTimeFormat('he-IL', { timeZone: CFG.tz, weekday: 'long' });
+  function nextLabel() {
+    var d = nextDate();
+    return d === E.addDays(nowLocal().date, 1) ? 'מחר' : HE_WEEKDAY.format(new Date(d + 'T12:00:00Z'));
+  }
+
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
   // ---------- אחסון (פרטי לכל משתמשת) ----------
@@ -40,7 +52,7 @@
 
   async function loadState() {
     if (!cap.db || !state.uid) return;
-    var res = await Promise.allSettled([docRef('plan').get(), docRef('rules').get(), docRef('handled').get()]);
+    var res = await Promise.allSettled([docRef('plan').get(), docRef('rules').get(), docRef('handled').get(), docRef('preview').get()]);
     if (res[0].status === 'fulfilled' && res[0].value.exists) {
       var d = res[0].value.data();
       state.plan = d.plan || null;
@@ -48,6 +60,10 @@
     }
     if (res[1].status === 'fulfilled' && res[1].value.exists) state.rules = res[1].value.data().rules || [];
     if (res[2].status === 'fulfilled' && res[2].value.exists) state.handled = res[2].value.data().ids || {};
+    if (res[3].status === 'fulfilled' && res[3].value.exists) {
+      state.preview = res[3].value.data().preview || null;
+      state.previewFetchedAt = res[3].value.data().fetchedAt || null;
+    }
   }
 
   var saving = {};
@@ -62,6 +78,7 @@
   }
 
   function savePlan() { return save('plan', { plan: state.plan, fetchedAt: state.fetchedAt }); }
+  function savePreview() { return save('preview', { preview: state.preview, fetchedAt: state.previewFetchedAt }); }
   function saveRules() { return save('rules', { rules: state.rules, updatedAt: new Date().toISOString() }); }
   function saveHandled() {
     var cutoff = E.addDays(nowLocal().date, -30), ids = {};
@@ -310,6 +327,41 @@
     var n = nowLocal();
     var from = state.plan.date === n.date ? n.min : 0;
     state.plan = E.replan(state.plan, state.rules, { nowMs: Date.now(), fromMin: from, cfg: CFG });
+    previewLocal();
+  }
+
+  // לו"ז יום העבודה הבא: הפגישות שלו + כל מה שעוד פתוח היום, מתחילת היום
+  function previewLocal() {
+    if (!state.preview || !state.plan) return;
+    var base = { date: state.preview.date, meetings: state.preview.meetings || [], allDay: state.preview.allDay || [], tasks: E.carryOver(state.plan) };
+    state.preview = E.replan(base, state.rules, { nowMs: Date.now(), fromMin: 0, cfg: CFG });
+  }
+
+  async function buildPreview() {
+    if (state.busy || !state.plan) return;
+    var date = nextDate();
+    var old = state.preview && state.preview.date === date ? state.preview : null;
+    var meetings = old ? old.meetings : [], allDay = old ? (old.allDay || []) : [];
+    setBusy('מושך את היומן של ' + nextLabel() + '…');
+    if (cap.mcp) {
+      try {
+        var raw = await fetchCalendar(date);
+        var ev = E.normalizeEvents(raw, date, CFG);
+        var oldPrep = {};
+        meetings.forEach(function (m) { if (m.prep) oldPrep[m.id] = m.prep; });
+        ev.meetings.forEach(function (m) { if (oldPrep[m.id]) m.prep = oldPrep[m.id]; });
+        meetings = ev.meetings; allDay = ev.allDay;
+        state.src.calendar = 'ok'; delete state.srcMsg.calendar;
+      } catch (e) { state.src.calendar = 'error'; state.srcMsg.calendar = mcpMessage(e); }
+    }
+    var mailItems = state.plan.tasks.filter(function (t) { return t.source === 'mail'; });
+    await prepMeetings(meetings, mailItems);
+    state.preview = { date: date, meetings: meetings, allDay: allDay, tasks: [] };
+    state.previewFetchedAt = new Date().toISOString();
+    previewLocal();
+    setBusy('');
+    render();
+    savePreview();
   }
 
   async function buildDay() {
@@ -328,7 +380,8 @@
       if (res[0].status === 'fulfilled') {
         var ev = E.normalizeEvents(res[0].value, today, CFG);
         var oldPrep = {};
-        (meetings || []).forEach(function (m) { if (m.prep) oldPrep[m.id] = m.prep; });
+        var prevMeetings = (meetings || []).concat(state.preview && state.preview.date === today ? state.preview.meetings || [] : []);
+        prevMeetings.forEach(function (m) { if (m.prep) oldPrep[m.id] = m.prep; });
         ev.meetings.forEach(function (m) { if (oldPrep[m.id]) m.prep = oldPrep[m.id]; });
         meetings = ev.meetings; allDay = ev.allDay;
         state.src.calendar = 'ok'; delete state.srcMsg.calendar;
@@ -356,6 +409,7 @@
     setBusy('');
     render();
     savePlan();
+    if (activeView() === 'next') await buildPreview();
   }
 
   // ---------- פעולות משתמשת ----------
@@ -369,6 +423,7 @@
     render();
     savePlan();
     var t = state.plan.tasks.find(function (x) { return x.id === id; });
+    if (activeView() === 'next') { if (status === 'done') toast('סומן כבוצע.'); return; }
     if (status === 'missed' && t) {
       toast(t.placement === 'today' ? 'הועבר ל-' + E.fmt(t.start) + '. שאר היום סודר מחדש.' : 'אין חלון פנוי היום. המשימה עברה למחר.');
     } else if (status === 'done') toast('סומן כבוצע. שאר היום סודר מחדש.');
@@ -456,6 +511,12 @@
     toast('נוספו ' + tasks.length + ' משימות ושובצו בלו"ז.');
   }
 
+  function setView(v) {
+    state.view = v;
+    if (v === 'next' && (!state.preview || state.preview.date !== nextDate())) buildPreview();
+    render();
+  }
+
   // ---------- תצוגה ----------
 
   function el(tag, cls, text) {
@@ -523,8 +584,8 @@
       m.onclick = function () { mark(t.id, 'missed'); };
       var x = el('button', 'btn ghost small', 'לא רלוונטי');
       x.onclick = function () { mark(t.id, 'dismissed'); };
-      acts.append(d, m, x);
-      if (t.start != null && t.end <= n.min && state.plan.date === n.date) li.classList.add('overdue');
+      if (activeView() === 'next') acts.append(d, x); else acts.append(d, m, x);
+      if (activeView() === 'today' && t.start != null && t.end <= n.min && state.plan.date === n.date) li.classList.add('overdue');
     }
     li.append(time, body, acts);
     return li;
@@ -549,16 +610,28 @@
 
   function render() {
     var n = nowLocal();
-    $('today').textContent = HE_DATE.format(new Date());
-    $('updated').textContent = state.fetchedAt ? 'עודכן ' + HE_TIME.format(new Date(state.fetchedAt)) : 'עוד לא עודכן היום';
+    var view = activeView();
+    var isNext = view === 'next';
+    var plan = isNext ? state.preview : state.plan;
+    var shownDate = isNext ? nextDate() : n.date;
+    $('today').textContent = HE_DATE.format(new Date(shownDate + 'T12:00:00Z'));
+    $('view-label').textContent = isNext ? 'הכנה ל' + nextLabel() : 'היום';
+    $('v-next').textContent = nextLabel();
+    $('v-today').setAttribute('aria-pressed', String(!isNext));
+    $('v-next').setAttribute('aria-pressed', String(isNext));
+    var stamp = isNext ? state.previewFetchedAt : state.fetchedAt;
+    $('updated').textContent = stamp ? 'עודכן ' + HE_TIME.format(new Date(stamp)) : 'עוד לא עודכן';
+    $('next-note').hidden = !isNext;
+    $('l-tomorrow').textContent = isNext ? 'עוברות ליום שאחריו' : 'עוברות למחר';
+    $('h-tomorrow').textContent = isNext ? 'לא נכנס ל' + nextLabel() : 'עובר למחר';
 
     renderSources();
     renderRules();
 
-    var plan = state.plan;
     var list = $('timeline');
     list.innerHTML = '';
     if (!plan) {
+      if (isNext) $('empty-text').textContent = state.busy ? 'בונה את הלו"ז של ' + nextLabel() + '…' : 'הלו"ז של ' + nextLabel() + ' ייבנה בלחיצה על "רענון".';
       $('empty').hidden = false;
       $('summary').hidden = true;
       $('later').hidden = true;
@@ -593,7 +666,7 @@
       .concat(today.map(function (t) { return { at: t.start, end: t.end, node: function () { return taskRow(t, n); } }; }))
       .sort(function (a, b) { return a.at - b.at || a.end - b.end; });
 
-    var nowPlaced = plan.date !== n.date;
+    var nowPlaced = isNext || plan.date !== n.date;
     rows.forEach(function (r) {
       if (!nowPlaced && r.at > n.min) {
         list.append(nowLine(n.min));
@@ -690,6 +763,8 @@
     $('rule-form').addEventListener('submit', onRuleSubmit);
     $('paste-form').addEventListener('submit', onPasteSubmit);
     $('refresh').addEventListener('click', function () { buildDay(); });
+    $('v-today').addEventListener('click', function () { setView('today'); });
+    $('v-next').addEventListener('click', function () { setView('next'); });
     $('export').addEventListener('click', exportRules);
     $('perm-btn').addEventListener('click', function () { cap.permissions && cap.permissions.manage().catch(function () {}); });
 
@@ -713,11 +788,17 @@
       var stale = !state.fetchedAt || Date.now() - new Date(state.fetchedAt).getTime() > 3600000;
       if (stale) await buildDay(); else { replanNow(); render(); }
     }
+    if (activeView() === 'next') {
+      var pStale = !state.previewFetchedAt || Date.now() - new Date(state.previewFetchedAt).getTime() > 3600000;
+      if (!state.preview || state.preview.date !== nextDate() || pStale) await buildPreview();
+    }
 
     // בדיקה כל דקה: קו "עכשיו", ובניית יום חדש אוטומטית בבוקר
     setInterval(function () {
       var cur = nowLocal();
       if (state.plan && state.plan.date !== cur.date && cur.min >= E.hm('05:00') && !document.hidden) buildDay();
+      else if (!state.busy && activeView() === 'next' && !document.hidden &&
+        (!state.preview || state.preview.date !== nextDate())) buildPreview();
       else if (!state.busy) render();
     }, 60000);
     document.addEventListener('visibilitychange', function () {

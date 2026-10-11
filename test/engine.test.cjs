@@ -143,3 +143,8 @@ test('sanitizeClassification clamps bad AI output', () => {
   assert.equal(c.context, 'מחשב');
   assert.equal(c.urgent, true);
 });
+
+test('nextWorkday skips Friday and Saturday', () => {
+  assert.equal(E.nextWorkday('2026-10-11'), '2026-10-12'); // ראשון → שני
+  assert.equal(E.nextWorkday('2026-10-15'), '2026-10-18'); // חמישי → ראשון
+});
