@@ -69,6 +69,11 @@
     return d.toISOString().slice(0, 10);
   }
 
+  // מספר הימים מתאריך a לתאריך b (YYYY-MM-DD)
+  function daysBetween(a, b) {
+    return Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
+  }
+
   // יום העבודה הבא אחרי התאריך הנתון (מדלג על סוף שבוע)
   function nextWorkday(dateStr, workDays) {
     var days = workDays || DEFAULTS.workDays;
@@ -319,9 +324,10 @@
   // ---------- תעדוף ----------
 
   function quadrantOf(t) {
-    if (t.urgent && t.important) return 'Q1';
+    var urgent = t.urgent || t.dueSoon; // יעד היום או מחר הופך משימה לדחופה
+    if (urgent && t.important) return 'Q1';
     if (t.important) return 'Q2';
-    if (t.urgent) return 'Q3';
+    if (urgent) return 'Q3';
     return 'Q4';
   }
 
@@ -339,6 +345,7 @@
     var s = QUADRANTS[q].base + recencyBoost(t.receivedAt, nowMs) + (t.ruleBoost || 0);
     if (t.minutes <= 2) s += 8;               // GTD: פחות משתי דקות – לעשות מיד
     if (t.carried) s += 10 + 5 * Math.min(3, t.missedCount || 0); // לא להזניח את מה שנדחה
+    if (t.daysLeft != null) s += t.daysLeft < 0 ? 60 : Math.max(0, 45 - 12 * t.daysLeft); // ככל שהיעד קרוב יותר
     return Math.round(s * 10) / 10;
   }
 
@@ -426,10 +433,14 @@
     var ruled = applyRules(plan.tasks, rules);
     var open = [], keep = [], deferred = [];
     ruled.forEach(function (t) {
+      t.daysLeft = t.dueDate ? daysBetween(plan.date, t.dueDate) : null;
+      t.dueSoon = t.daysLeft != null && t.daysLeft <= 1;
+      t.atRisk = false;
       t.quadrant = quadrantOf(t);
       t.score = scoreTask(t, nowMs);
       if (t.status === 'done' || t.status === 'dismissed') { keep.push(t); return; }
-      if (!t.forced && (t.actionable === false || t.skipped || t.quadrant === 'Q4')) {
+      var dueClose = t.daysLeft != null && t.daysLeft <= 3;
+      if (!t.forced && (t.actionable === false || t.skipped || (t.quadrant === 'Q4' && !dueClose))) {
         t.start = t.end = null;
         t.placement = 'deferred';
         deferred.push(t);
@@ -448,7 +459,10 @@
     res.placed.forEach(function (p) { at[p.id] = p; });
     open.forEach(function (t) {
       if (at[t.id]) { t.start = at[t.id].start; t.end = at[t.id].end; t.placement = 'today'; }
-      else { t.start = t.end = null; t.placement = 'tomorrow'; }
+      else {
+        t.start = t.end = null; t.placement = 'tomorrow';
+        t.atRisk = t.daysLeft != null && t.daysLeft <= 0; // אין זמן פנוי לפני היעד
+      }
     });
 
     var tasks = keep.concat(open, deferred).sort(function (a, b) {
@@ -537,6 +551,7 @@
       var re = c === 'טלפון' ? /(טלפון|שיחות|שיחה|להתקשר)/ : c === 'פגישה' ? /(פגישה|פגישות)/ : c === 'בחוץ' ? /(בחוץ|סידורים)/ : /(מחשב)/;
       if (re.test(t) && !subject) { rule.match.contexts = (rule.match.contexts || []).concat([c]); }
     });
+    if (/(אישי|אישיות|פרטי|פרטיות)/.test(t)) rule.match.sources = ['personal'];
     if (/(קצרות|קצרים|קטנות)/.test(t) && !subject) rule.match.maxMinutes = 15;
     if (/(ארוכות|עמוקה|ריכוז)/.test(t) && !subject) rule.match.minMinutes = 45;
     if (/(הכי דחוף|בראש|קודם כל|עדיפות עליונה|הכי חשוב)/.test(t)) {
@@ -568,6 +583,7 @@
     if (m.keywords && m.keywords.length) who.push('כל מה שקשור ל"' + m.keywords.join('" / "') + '"');
     if (m.senders && m.senders.length) who.push('מהשולחים ' + m.senders.join(', '));
     if (m.contexts && m.contexts.length) who.push('משימות ' + m.contexts.join('/'));
+    if (m.sources && m.sources.indexOf('personal') >= 0) who.push('משימות אישיות');
     if (m.maxMinutes) who.push('משימות של עד ' + m.maxMinutes + ' דק\'');
     if (m.minMinutes) who.push('משימות של ' + m.minMinutes + ' דק\' ומעלה');
     if (m.quadrants && m.quadrants.length) who.push('משימות ברבע ' + m.quadrants.join('/'));
@@ -609,7 +625,7 @@
 
   var api = {
     DEFAULTS: DEFAULTS, CONTEXTS: CONTEXTS, QUADRANTS: QUADRANTS,
-    hm: hm, fmt: fmt, localParts: localParts, addDays: addDays, nextWorkday: nextWorkday, graphTime: graphTime,
+    hm: hm, fmt: fmt, daysBetween: daysBetween, localParts: localParts, addDays: addDays, nextWorkday: nextWorkday, graphTime: graphTime,
     parseToolBlocks: parseToolBlocks, normalizeEvents: normalizeEvents, normalizeEmails: normalizeEmails,
     isInvite: isInvite, heuristicClassify: heuristicClassify, sanitizeClassification: sanitizeClassification,
     makeTask: makeTask, ruleMatches: ruleMatches, applyRules: applyRules, settingsFromRules: settingsFromRules,

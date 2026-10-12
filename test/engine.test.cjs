@@ -148,3 +148,30 @@ test('nextWorkday skips Friday and Saturday', () => {
   assert.equal(E.nextWorkday('2026-10-11'), '2026-10-12'); // ראשון → שני
   assert.equal(E.nextWorkday('2026-10-15'), '2026-10-18'); // חמישי → ראשון
 });
+
+test('a near deadline raises priority and makes the task urgent', () => {
+  const plan = { date: '2026-10-11', meetings: [], tasks: [
+    task('far', { important: true, dueDate: '2026-10-30' }),
+    task('soon', { important: true, dueDate: '2026-10-12', receivedAt: '2026-10-01T00:00:00Z' })
+  ] };
+  const out = E.replan(plan, [], { nowMs: NOW, fromMin: E.hm('08:00'), cfg: CFG });
+  const soon = out.tasks.find(t => t.id === 'soon');
+  assert.equal(soon.quadrant, 'Q1');
+  assert.equal(E.fmt(soon.start), '08:30');
+});
+
+test('a task due today with no free time is flagged at risk', () => {
+  const plan = { date: '2026-10-11', meetings: [{ kind: 'meeting', start: E.hm('08:30'), end: E.hm('18:00') }],
+    tasks: [task('x', { dueDate: '2026-10-11' })] };
+  const out = E.replan(plan, [], { nowMs: NOW, fromMin: E.hm('08:00'), cfg: CFG });
+  assert.equal(out.tasks[0].placement, 'tomorrow');
+  assert.equal(out.tasks[0].atRisk, true);
+});
+
+test('a rule about personal tasks matches the personal source', () => {
+  const rule = Object.assign({ id: 'rp' }, E.parseRuleText('משימות אישיות רק בין 17:00 ל-18:00'));
+  assert.deepEqual(rule.match.sources, ['personal']);
+  const plan = { date: '2026-10-11', meetings: [], tasks: [task('p', { source: 'personal' })] };
+  const out = E.replan(plan, [rule], { nowMs: NOW, fromMin: E.hm('08:00'), cfg: CFG });
+  assert.equal(E.fmt(out.tasks[0].start), '17:00');
+});

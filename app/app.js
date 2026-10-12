@@ -44,6 +44,18 @@
     return d === E.addDays(nowLocal().date, 1) ? 'מחר' : HE_WEEKDAY.format(new Date(d + 'T12:00:00Z'));
   }
 
+  function validDate(d) { return typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d); }
+
+  var HE_SHORT = new Intl.DateTimeFormat('he-IL', { timeZone: CFG.tz, weekday: 'short', day: 'numeric', month: 'numeric' });
+  function dueLabel(t) {
+    if (!t.dueDate) return '';
+    var d = E.daysBetween(nowLocal().date, t.dueDate);
+    if (d < 0) return 'באיחור של ' + (-d === 1 ? 'יום' : (-d) + ' ימים');
+    if (d === 0) return 'יעד: היום';
+    if (d === 1) return 'יעד: מחר';
+    return 'יעד: ' + HE_SHORT.format(new Date(t.dueDate + 'T12:00:00Z'));
+  }
+
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
   // ---------- אחסון (פרטי לכל משתמשת) ----------
@@ -243,6 +255,7 @@
       keywords: strs(m.keywords), senders: strs(m.senders),
       contexts: (strs(m.contexts) || []).filter(function (c) { return E.CONTEXTS.indexOf(c) >= 0; }),
       quadrants: (strs(m.quadrants) || []).filter(function (q) { return /^Q[1-4]$/.test(q); }),
+      sources: (strs(m.sources) || []).filter(function (x) { return ['personal', 'mail', 'paste', 'manual'].indexOf(x) >= 0; }),
       maxMinutes: Number(m.maxMinutes) || undefined, minMinutes: Number(m.minMinutes) || undefined,
       all: m.all === true || undefined
     };
@@ -275,13 +288,13 @@
       try {
         var r = await cap.sample.json([
           'Convert the user\'s scheduling instruction (Hebrew) into a JSON rule for her daily planner.',
-          'Schema: {"match":{"keywords":[string],"senders":[string],"contexts":["מחשב"|"טלפון"|"פגישה"|"בחוץ"],"quadrants":["Q1"|"Q2"|"Q3"|"Q4"],"maxMinutes":number,"minMinutes":number,"all":boolean},',
+          'Schema: {"match":{"keywords":[string],"senders":[string],"sources":["personal"|"mail"|"paste"|"manual"],"contexts":["מחשב"|"טלפון"|"פגישה"|"בחוץ"],"quadrants":["Q1"|"Q2"|"Q3"|"Q4"],"maxMinutes":number,"minMinutes":number,"all":boolean},',
           '"effect":{"priority":number,"urgent":boolean,"important":boolean,"window":{"start":"HH:MM","end":"HH:MM"},"minutes":number,"context":string,"delegateTo":string,"skip":boolean,"settings":{"dayStart":"HH:MM","dayEnd":"HH:MM","bufferMin":number}},',
           '"explain":"one short Hebrew sentence saying what the rule does"}',
           'Omit fields that do not apply. priority ranges -100..300; 200 means top of the day, 40 a moderate boost, negative pushes later.',
           'Day parts: בוקר 08:00-12:00, צהריים 12:00-15:00, אחה"צ 14:00-18:00, ערב 17:00-21:00.',
           'keywords are short distinctive terms (client or project name); add the English spelling or email domain when obvious. Quadrants: Q1 urgent+important, Q2 important, Q3 urgent only, Q4 neither.',
-          'For working hours use effect.settings with match.all=true.',
+          'For working hours use effect.settings with match.all=true. Personal tasks (משימות אישיות / פרטיות) are match.sources=["personal"].',
           'Instruction: ' + JSON.stringify(text),
           'Reply with only the JSON object.'
         ].join('\n'), { modelTier: 'default', cache: false });
@@ -299,14 +312,17 @@
       try {
         var r = await cap.sample.json([
           'The user pasted messages (WhatsApp, Teams or notes). Extract only the action items that are hers to do.',
-          'For each: {"title": short Hebrew title, "from": who asked or null, "nextAction": Hebrew infinitive next action, "minutes": 2-120, "context": "מחשב"|"טלפון"|"פגישה"|"בחוץ", "urgent": boolean, "important": boolean, "delegateTo": string|null, "client": string|null}.',
+          'For each: {"title": short Hebrew title, "from": who asked or null, "nextAction": Hebrew infinitive next action, "minutes": 2-120, "context": "מחשב"|"טלפון"|"פגישה"|"בחוץ", "urgent": boolean, "important": boolean, "delegateTo": string|null, "client": string|null, "dueDate": "YYYY-MM-DD" or null}.',
+          'Today is ' + nowLocal().date + ' (Israel). Resolve relative deadlines such as "עד יום חמישי" or "עד סוף החודש" to a dueDate; use null when no deadline is stated.',
           'Reply with only JSON: {"tasks":[...]}. Return {"tasks":[]} if nothing is actionable.',
           'Text:\n' + text.slice(0, 12000)
         ].join('\n'), { modelTier: 'default', cache: false });
         if (r && Array.isArray(r.tasks)) {
           return r.tasks.slice(0, 30).map(function (t) {
             var item = { id: 'manual:' + uid(), source: 'paste', title: String(t.title || t.nextAction || 'משימה').slice(0, 120), from: t.from || '', snippet: '', receivedAt: new Date().toISOString(), link: '' };
-            return E.makeTask(item, E.sanitizeClassification(t, item));
+            var task = E.makeTask(item, E.sanitizeClassification(t, item));
+            if (validDate(t.dueDate)) task.dueDate = t.dueDate;
+            return task;
           });
         }
       } catch (e) { /* גיבוי: שורה = משימה */ }
@@ -498,6 +514,52 @@
     }
   }
 
+  function onPersonalSubmit(ev) {
+    ev.preventDefault();
+    var title = $('p-title').value.trim();
+    if (!title || !state.plan) return;
+    var minutes = Math.min(240, Math.max(5, Number($('p-min').value) || 30));
+    var due = $('p-due').value;
+    var item = { id: 'personal:' + uid(), source: 'personal', title: title.slice(0, 120), from: '', snippet: '', receivedAt: new Date().toISOString(), link: '' };
+    var task = E.makeTask(item, {
+      actionable: true, nextAction: title.slice(0, 160), minutes: minutes, context: $('p-ctx').value,
+      urgent: false, important: $('p-imp').checked, delegateTo: null, client: null, classifiedBy: 'user'
+    });
+    if (validDate(due)) task.dueDate = due;
+    state.plan.tasks = state.plan.tasks.concat([task]);
+    $('p-title').value = ''; $('p-due').value = '';
+    replanNow(); render(); savePlan();
+    var placed = state.plan.tasks.find(function (t) { return t.id === task.id; });
+    toast(placed && placed.start != null ? 'נוספה ושובצה ל-' + E.fmt(placed.start) + '.' : 'נוספה. אין לה חלון פנוי היום, היא תשובץ בהמשך.');
+  }
+
+  // קביעה או שינוי של יעד לכל משימה
+  function setDue(id, value) {
+    if (!state.plan) return;
+    state.plan.tasks = state.plan.tasks.map(function (t) {
+      return t.id === id ? Object.assign({}, t, { dueDate: validDate(value) ? value : null }) : t;
+    });
+    replanNow(); render(); savePlan();
+    toast(validDate(value) ? 'היעד נשמר והלו"ז סודר מחדש.' : 'היעד הוסר.');
+  }
+
+  function dueEditor(t) {
+    var wrap = el('span', 'due-edit');
+    var btn = el('button', 'btn ghost small', t.dueDate ? 'שינוי יעד' : 'קביעת יעד');
+    btn.type = 'button';
+    var input = document.createElement('input');
+    input.type = 'date';
+    input.className = 'due-input';
+    input.hidden = true;
+    input.value = t.dueDate || '';
+    input.min = nowLocal().date;
+    input.setAttribute('aria-label', 'יעד למשימה: ' + (t.nextAction || t.title));
+    btn.onclick = function () { input.hidden = false; btn.hidden = true; input.focus(); if (input.showPicker) { try { input.showPicker(); } catch (e) { /* לא נתמך */ } } };
+    input.onchange = function () { setDue(t.id, input.value); };
+    wrap.append(btn, input);
+    return wrap;
+  }
+
   async function onPasteSubmit(ev) {
     ev.preventDefault();
     var text = $('paste-text').value.trim();
@@ -568,8 +630,8 @@
     var body = el('div', 'body');
     var title = el('div', 'title', t.nextAction || t.title);
     var sub = el('div', 'sub');
-    var srcLabel = t.source === 'mail' ? 'מייל' : t.source === 'paste' ? 'הודבק' : 'ידני';
-    sub.textContent = srcLabel + (t.from ? ' · ' + t.from : '') + (t.title && t.nextAction ? ' · ' + t.title : '') + (t.receivedAt && t.source === 'mail' ? ' · ' + relAge(t.receivedAt) : '');
+    var srcLabel = t.source === 'mail' ? 'מייל' : t.source === 'paste' ? 'הודבק' : t.source === 'personal' ? 'אישי' : 'ידני';
+    sub.textContent = srcLabel + (t.from ? ' · ' + t.from : '') + (t.title && t.nextAction && t.title !== t.nextAction ? ' · ' + t.title : '') + (t.receivedAt && t.source === 'mail' ? ' · ' + relAge(t.receivedAt) : '');
     var chips = el('div', 'chips');
     chips.append(chip(E.QUADRANTS[t.quadrant].label, 'q'), chip(t.context), chip(t.minutes + ' דק\''));
     if (t.minutes <= 2) chips.append(chip('פחות משתי דקות', 'note'));
@@ -577,6 +639,8 @@
     if (t.client) chips.append(chip(t.client));
     if (t.carried) chips.append(chip(t.missedCount ? 'נדחה ' + t.missedCount + '×' : 'מאתמול', 'note'));
     if (t.appliedRules && t.appliedRules.length) chips.append(chip('כלל', 'rule'));
+    if (t.source === 'personal') chips.append(chip('אישי', 'personal'));
+    if (t.dueDate) chips.append(chip(dueLabel(t), t.daysLeft != null && t.daysLeft <= 1 ? 'due-hot' : 'due'));
     body.append(title, sub, chips);
     var link = safeLink(t.link, 'פתיחה ב-Outlook');
     if (link) body.append(link);
@@ -596,6 +660,7 @@
       var x = el('button', 'btn ghost small', 'לא רלוונטי');
       x.onclick = function () { mark(t.id, 'dismissed'); };
       if (activeView() === 'next') acts.append(d, x); else acts.append(d, m, x);
+      acts.append(dueEditor(t));
       if (activeView() === 'today' && t.start != null && t.end <= n.min && state.plan.date === n.date) li.classList.add('overdue');
     }
     li.append(time, body, acts);
@@ -698,6 +763,31 @@
     $('tomorrow-wrap').hidden = !tomorrow.length;
     $('deferred-wrap').hidden = !deferred.length;
     renderClosed(closed);
+    renderPersonal();
+  }
+
+  // כל המשימות האישיות הפתוחות, לפי יעד, עם המצב שלהן בלו"ז
+  function renderPersonal() {
+    var tasks = state.plan ? state.plan.tasks.filter(function (t) { return t.source === 'personal' && t.status === 'pending'; }) : [];
+    tasks.sort(function (a, b) {
+      return (a.dueDate || '9999') < (b.dueDate || '9999') ? -1 : (a.dueDate || '9999') > (b.dueDate || '9999') ? 1 : (b.score || 0) - (a.score || 0);
+    });
+    $('personal-empty').hidden = tasks.length > 0;
+    var ul = $('personal-list');
+    ul.innerHTML = '';
+    tasks.forEach(function (t) {
+      var li = el('li', 'mini' + (t.atRisk ? ' at-risk' : ''));
+      var txt = el('div', 'mini-t');
+      var where = t.start != null ? 'משובץ היום ' + E.fmt(t.start) : t.placement === 'deferred' ? 'לא שובץ' : 'יעבור ליום הבא';
+      if (t.atRisk) where = 'בסיכון: אין זמן פנוי לפני היעד';
+      txt.append(el('b', '', t.nextAction || t.title), el('span', t.atRisk ? 'warn' : 'muted', [dueLabel(t) || 'ללא יעד', where, t.minutes + ' דק\''].join(' · ')));
+      var acts = el('div', 'acts');
+      var d = el('button', 'btn ok small', 'בוצע');
+      d.onclick = function () { mark(t.id, 'done'); };
+      acts.append(d, dueEditor(t));
+      li.append(txt, acts);
+      ul.append(li);
+    });
   }
 
   // רשימה מקופלת של מה שנסגר היום, עם אפשרות להחזיר ללו"ז
@@ -762,10 +852,10 @@
     });
     var wa = el('li', 'src st-manual');
     wa.append(el('span', 'dot'), el('b', '', 'וואטסאפ'), el('span', 'st', 'הדבקה ידנית'));
-    wa.append(el('p', 'src-msg', 'אין חיבור רשמי לקריאת וואטסאפ אישי. הדביקי הודעות בתיבה "הוספת משימות".'));
+    wa.append(el('p', 'src-msg', 'אין חיבור רשמי לקריאת וואטסאפ אישי. הדביקי הודעות ב"הדבקת הודעות" שבחלק "משימה אישית".'));
     var todo = el('li', 'src st-manual');
     todo.append(el('span', 'dot'), el('b', '', 'רשימת משימות'), el('span', 'st', 'בתוך האפליקציה'));
-    todo.append(el('p', 'src-msg', 'המחבר של Microsoft 365 לא חושף את Microsoft To Do. משימות נוספות כאן.'));
+    todo.append(el('p', 'src-msg', 'המחבר של Microsoft 365 לא חושף את Microsoft To Do. משימות אישיות, עם יעד, מוסיפים בחלק "משימה אישית".'));
     ul.append(wa, todo);
     $('perm-btn').hidden = !(cap.permissions && (state.src.calendar === 'error' || state.src.mail === 'error' || state.src.ai === 'fallback'));
   }
@@ -794,6 +884,7 @@
     render();
     $('rule-form').addEventListener('submit', onRuleSubmit);
     $('paste-form').addEventListener('submit', onPasteSubmit);
+    $('personal-form').addEventListener('submit', onPersonalSubmit);
     $('refresh').addEventListener('click', function () { buildDay(); });
     $('v-today').addEventListener('click', function () { setView('today'); });
     $('v-next').addEventListener('click', function () { setView('next'); });

@@ -151,6 +151,19 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
 .hint { font-size: .8rem; color: var(--muted); margin: 0; }
 
 .empty { text-align: start; color: var(--muted); padding: 24px 0; }
+.pform { display: grid; gap: 8px; }
+.pform input[type="text"], .pgrid input, .pgrid select { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; background: var(--bg); color: var(--ink); }
+.pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pgrid label { display: grid; gap: 2px; font-size: .8rem; color: var(--muted); min-width: 0; }
+.pgrid .pcheck { display: flex; align-items: center; gap: 6px; color: var(--ink); font-size: .9rem; }
+.pgrid .pcheck input { width: auto; }
+.sub-h { font-family: var(--font-display); font-size: .95rem; margin: 0 0 6px; }
+.mini.at-risk { background: color-mix(in srgb, var(--q1) 8%, transparent); border-radius: 6px; padding-inline: 6px; }
+.chip.personal { color: var(--meeting); }
+.chip.due { color: var(--accent); font-weight: 600; }
+.chip.due-hot { color: var(--q1); background: color-mix(in srgb, var(--q1) 12%, transparent); font-weight: 700; }
+.due-input { font: inherit; font-size: .82rem; border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; background: var(--bg); color: var(--ink); }
+.pform input:focus-visible, .pgrid input:focus-visible, .pgrid select:focus-visible, .due-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .closed-sum { cursor: pointer; font-family: var(--font-display); font-weight: 600; }
 details[open] .closed-sum { margin-bottom: 8px; }
 .toast-undo { font: inherit; font-weight: 700; background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; margin-inline-start: 12px; padding: 0; }
@@ -228,13 +241,32 @@ details[open] .closed-sum { margin-bottom: 8px; }
         <ul class="plain" id="rules"></ul>
       </section>
 
-      <section class="panel" aria-labelledby="paste-h">
-        <h2 id="paste-h">הוספת משימות</h2>
-        <form id="paste-form" style="display:grid;gap:8px">
-          <label for="paste-text" class="hint">הדביקי הודעות מוואטסאפ או מ-Teams, או כתבי משימות בשורות נפרדות.</label>
-          <textarea id="paste-text" rows="4"></textarea>
-          <div class="row"><button class="btn small" id="paste-submit" type="submit">חילוץ ושיבוץ</button></div>
+      <section class="panel" aria-labelledby="personal-h">
+        <h2 id="personal-h">משימה אישית</h2>
+        <form id="personal-form" class="pform">
+          <label for="p-title" class="hint">משימה שלא מופיעה ביומן או במייל. היא תשובץ בחלון פנוי ותעבור מיום ליום עד שתסומן כבוצעה.</label>
+          <input id="p-title" type="text" placeholder="למשל: להכין טיוטת הצעה לכלמוביל" required>
+          <div class="pgrid">
+            <label for="p-min">משך (דק')<input id="p-min" type="number" min="5" max="240" step="5" value="30"></label>
+            <label for="p-due">יעד (לא חובה)<input id="p-due" type="date"></label>
+            <label for="p-ctx">הקשר<select id="p-ctx"><option>מחשב</option><option>טלפון</option><option>פגישה</option><option>בחוץ</option></select></label>
+            <label class="pcheck" for="p-imp"><input id="p-imp" type="checkbox" checked> חשובה</label>
+          </div>
+          <div class="row"><button class="btn primary small" type="submit">הוספה ושיבוץ</button></div>
         </form>
+        <div>
+          <h3 class="sub-h">המשימות האישיות שלי</h3>
+          <p class="hint" id="personal-empty">עוד אין משימות אישיות פתוחות.</p>
+          <ul class="plain" id="personal-list"></ul>
+        </div>
+        <details>
+          <summary class="closed-sum">הדבקת הודעות (וואטסאפ, Teams)</summary>
+          <form id="paste-form" style="display:grid;gap:8px;margin-top:8px">
+            <label for="paste-text" class="hint">הדביקי הודעות או כתבי כמה משימות בשורות נפרדות. Claude יחלץ מהן משימות ויעדים, למשל "עד יום חמישי".</label>
+            <textarea id="paste-text" rows="4"></textarea>
+            <div class="row"><button class="btn small" id="paste-submit" type="submit">חילוץ ושיבוץ</button></div>
+          </form>
+        </details>
       </section>
 
       <section class="panel" aria-labelledby="src-h">
