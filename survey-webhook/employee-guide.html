@@ -1,0 +1,382 @@
+<title>הקמת Webhook לסקר נוסעים</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Rubik:wght@500;700&display=swap">
+<style>
+/* Layout: single reading column, numbered stages (real sequence), settings tables, code at the end */
+:root{
+  --bg:#f6f8f8; --surface:#ffffff; --fg:#1d2a2c; --muted:#5b6b6e; --line:#d9e2e3;
+  --accent:#0f6e74; --accent-soft:#e3f1f1; --warn:#8a5a00; --warn-soft:#fdf3df; --code-bg:#f0f4f4;
+  --display:"Rubik",system-ui,sans-serif; --body:"Assistant",system-ui,sans-serif; --mono:ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111819; --surface:#182224; --fg:#e4eced; --muted:#9db0b2; --line:#2b3a3c;
+  --accent:#5cc3c9; --accent-soft:#16383a; --warn:#f0c26b; --warn-soft:#3a2f17; --code-bg:#0d1415; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111819; --surface:#182224; --fg:#e4eced; --muted:#9db0b2; --line:#2b3a3c;
+  --accent:#5cc3c9; --accent-soft:#16383a; --warn:#f0c26b; --warn-soft:#3a2f17; --code-bg:#0d1415; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.65;padding-inline:16px;padding-block:32px 64px}
+main{max-width:760px;margin-inline:auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.25;margin:0}
+h1{font-size:1.9rem}
+h2{font-size:1.3rem;display:flex;gap:12px;align-items:baseline}
+h3{font-size:1.05rem;margin-top:8px}
+p{margin:0}
+.lead{color:var(--muted);font-size:1.05rem}
+.meta{font-size:.85rem;color:var(--muted);letter-spacing:.02em}
+section{display:flex;flex-direction:column;gap:12px;min-width:0}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.num{font-family:var(--display);color:var(--accent);font-variant-numeric:tabular-nums;font-size:.95rem;border:1.5px solid var(--accent);border-radius:50%;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+ol,ul{margin:0;padding-inline-start:22px;display:flex;flex-direction:column;gap:6px}
+code{font-family:var(--mono);font-size:.88em;background:var(--code-bg);padding:1px 6px;border-radius:4px;direction:ltr;unicode-bidi:embed}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:start;vertical-align:top}
+th{font-family:var(--display);font-weight:500;color:var(--muted);font-size:.85rem;letter-spacing:.03em}
+.note{background:var(--warn-soft);color:var(--fg);border-inline-start:3px solid var(--warn);padding:12px 14px;border-radius:6px}
+.note b{color:var(--warn)}
+.flow{background:var(--accent-soft);border-radius:10px;padding:14px 16px;font-weight:600;text-align:center}
+.done{color:var(--muted);font-size:.95rem}
+.codebox{position:relative}
+.codehead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+button{font:600 .9rem var(--body);background:var(--accent);color:var(--surface);border:0;border-radius:6px;padding:8px 14px;cursor:pointer}
+button:focus-visible{outline:3px solid var(--accent-soft);outline-offset:2px}
+pre{direction:ltr;text-align:left;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px;overflow:auto;max-height:420px;font:13px/1.5 var(--mono);margin:0}
+</style>
+
+<main dir="rtl" lang="he">
+<header style="display:flex;flex-direction:column;gap:10px">
+  <p class="meta">NGG · מסמך עבודה פנימי</p>
+  <h1>הקמת Webhook לסקר נוסעים</h1>
+  <p class="lead">חיבור SurveyLegend ל-Google Sheets: כל תשובה נשמרת בגיליון, ותשובה שלילית מפעילה מייל התראה. על בסיס הגיליון ייבנה בהמשך דאשבורד.</p>
+</header>
+
+<div class="flow">נוסע ממלא סקר ← SurveyLegend ← Webhook ← Google Apps Script ← Google Sheets + מייל התראה</div>
+
+<section class="step">
+  <h2><span class="num">0</span>לפני שמתחילים</h2>
+  <ul>
+    <li>לעבוד <b>מחשבון Google הארגוני של NGG</b> (או של הלקוח, לפי הנחיה). לא מחשבון פרטי.</li>
+    <li>לעבוד על <b>סקר ניסיון</b>, לא על הסקר שמופץ לנוסעים.</li>
+    <li>קובץ הקוד מופיע בתחתית המסמך, עם כפתור העתקה.</li>
+  </ul>
+</section>
+
+<section class="step">
+  <h2><span class="num">1</span>הקמת הגיליון והסקריפט</h2>
+  <ol>
+    <li>לפתוח Google Sheet חדש בשם <b>"תוצאות סקר נוסעים – [שם הלקוח]"</b>.</li>
+    <li>בתפריט: <b>Extensions ← Apps Script</b>.</li>
+    <li>למחוק את כל התוכן בקובץ <code>Code.gs</code> ולהדביק את הקוד מתחתית המסמך.</li>
+    <li>לעדכן בראש הקוד, בתוך <code>CONFIG</code>:
+      <div class="tbl"><table>
+        <tr><th>שדה</th><th>מה לכתוב</th></tr>
+        <tr><td><code>SECRET_KEY</code></td><td>מחרוזת אקראית של 20 תווים לפחות, אותיות באנגלית ומספרים בלבד. לשמור אותה, היא תידרש בשלב 3.</td></tr>
+        <tr><td><code>ALERT_EMAILS</code></td><td>בשלב הניסיון: המייל שלך בלבד.</td></tr>
+        <tr><td><code>SURVEY_NAME</code></td><td>שם הסקר כפי שיופיע בכותרת המייל.</td></tr>
+      </table></div>
+    </li>
+    <li>לשמור (Ctrl+S).</li>
+  </ol>
+</section>
+
+<section class="step">
+  <h2><span class="num">2</span>בדיקה פנימית</h2>
+  <ol>
+    <li>בסרגל העליון של העורך לבחור את הפונקציה <code>testWebhook</code> וללחוץ <b>Run</b>.</li>
+    <li>Google תבקש הרשאות לגיליון ולשליחת מייל. לאשר.</li>
+    <li>לחזור לגיליון ולוודא שנוצרו הלשוניות <b>Raw</b> ו-<b>Responses</b>, ובכל אחת שורת ניסיון.</li>
+  </ol>
+  <p class="done">סיום תקין: שתי הלשוניות קיימות ויש בהן שורה. מייל עדיין <b>לא</b> אמור להישלח בשלב הזה.</p>
+</section>
+
+<section class="step">
+  <h2><span class="num">3</span>פרסום כתובת ה-Webhook</h2>
+  <ol>
+    <li><b>Deploy ← New deployment</b>, ולבחור סוג <b>Web app</b>.</li>
+    <li>Execute as: <b>Me</b>. Who has access: <b>Anyone</b>.</li>
+    <li>ללחוץ <b>Deploy</b> ולהעתיק את הכתובת. היא מסתיימת ב-<code>/exec</code>.</li>
+    <li>להוסיף לסוף הכתובת <code>?key=</code> ואחריו ה-SECRET_KEY משלב 1.<br>
+      לדוגמה: <code>https://script.google.com/macros/s/XXXX/exec?key=MySecret123</code></li>
+  </ol>
+  <p class="note"><b>אבטחה:</b> הכתובת המלאה, כולל המפתח, מאפשרת לכל מי שמחזיק בה לכתוב לגיליון. לא לשלוח אותה בקבוצות ולא לשמור אותה במסמכים פתוחים.</p>
+</section>
+
+<section class="step">
+  <h2><span class="num">4</span>הגדרה ב-SurveyLegend</h2>
+  <p>במסך ה-Webhooks של הסקר (<b>Add new webhook</b>):</p>
+  <div class="tbl"><table>
+    <tr><th>שדה</th><th>ערך</th></tr>
+    <tr><td>Endpoint URL</td><td>הכתובת המלאה משלב 3, כולל <code>?key=…</code></td></tr>
+    <tr><td>Trigger on</td><td>Submitted</td></tr>
+    <tr><td>Data format</td><td>JSON</td></tr>
+    <tr><td>Append responses</td><td>כבוי</td></tr>
+    <tr><td>Handshake key</td><td>להשאיר ריק בשלב זה</td></tr>
+  </table></div>
+  <ol>
+    <li>ללחוץ <b>Save</b> ואחר כך <b>Test</b>.</li>
+    <li>למלא את סקר הניסיון פעם אחת עד הסוף.</li>
+    <li>לבדוק שנוספה שורה חדשה בלשונית <b>Responses</b>.</li>
+  </ol>
+  <p class="note"><b>חשוב:</b> ייתכן שכפתור Test ב-SurveyLegend יציג שגיאה גם כשהחיבור עובד, בגלל האופן שבו Google מחזירה תשובה. מה שקובע הוא אם השורה נכנסה לגיליון.</p>
+</section>
+
+<section class="step">
+  <h2><span class="num">5</span>מה להחזיר אליי</h2>
+  <ul>
+    <li>צילום מסך של הלשונית <b>Raw</b> אחרי מילוי סקר הניסיון.</li>
+    <li>צילום מסך של שורת הכותרות בלשונית <b>Responses</b>.</li>
+    <li>האם Test ב-SurveyLegend הציג הצלחה או שגיאה.</li>
+    <li>הטקסט שמופיע בסימני השאלה ליד <b>Append responses</b> ו-<b>Handshake key</b>.</li>
+  </ul>
+  <p>לפי החומר הזה יוגדרו הכללים לזיהוי תשובה שלילית (<code>NEGATIVE_RULES</code>) והדאשבורד. <b>לא לשנות אותם לבד.</b></p>
+</section>
+
+<section class="step">
+  <h2><span class="num">6</span>עדכון קוד בהמשך</h2>
+  <p>אחרי כל שינוי בקוד: <b>Deploy ← Manage deployments ← עריכה (עיפרון) ← Version: New version ← Deploy</b>. בלי זה הכתובת ממשיכה להריץ את הגרסה הקודמת. הכתובת עצמה לא משתנה, ואין צורך לעדכן את SurveyLegend.</p>
+</section>
+
+<section class="step">
+  <h2>פתרון תקלות</h2>
+  <div class="tbl"><table>
+    <tr><th>מה רואים</th><th>מה לבדוק</th></tr>
+    <tr><td>אין שורה חדשה בגיליון</td><td>שהכתובת ב-SurveyLegend מסתיימת ב-<code>/exec?key=</code> ושהמפתח זהה לזה שבקוד. שהפרסום הוא עם הרשאת Anyone.</td></tr>
+    <tr><td>בלשונית Raw מופיעה שורה שמתחילה ב-ERROR</td><td>לצלם את השורה ולשלוח.</td></tr>
+    <tr><td>שינוי בקוד לא משפיע</td><td>לא פורסמה גרסה חדשה (שלב 6).</td></tr>
+    <tr><td>שגיאת הרשאות בהרצה</td><td>להריץ שוב את <code>testWebhook</code> ולאשר את כל ההרשאות.</td></tr>
+  </table></div>
+</section>
+
+<section class="step codebox">
+  <div class="codehead">
+    <h2>קוד הסקריפט (Code.gs)</h2>
+    <button type="button" id="copy-btn">העתקת הקוד</button>
+  </div>
+  <pre id="code">/**
+ * SurveyLegend → Google Sheets + התראה על תשובה שלילית
+ *
+ * הסקריפט מקבל כל תשובה שנשלחת מה-Webhook של SurveyLegend, כותב אותה לגיליון
+ * ושולח מייל כאשר התשובה עומדת באחד מכללי "תשובה שלילית" שמוגדרים למטה.
+ *
+ * שלב 1 (עכשיו): להשאיר NEGATIVE_RULES ריק, לשלוח תשובת ניסיון ולבדוק בלשונית Raw
+ *               איך נראים הנתונים.
+ * שלב 2: למלא את NEGATIVE_RULES לפי שמות השדות שהתקבלו בפועל.
+ */
+
+// ===================== הגדרות =====================
+
+const CONFIG = {
+  // מחרוזת סודית שמתווספת לכתובת ה-Webhook (?key=...). לשנות לערך אקראי משלך.
+  SECRET_KEY: 'CHANGE_ME_TO_A_RANDOM_STRING',
+
+  // נמענים להתראה, מופרדים בפסיקים.
+  ALERT_EMAILS: 'client@example.com',
+
+  // שם הסקר שיופיע בכותרת המייל.
+  SURVEY_NAME: 'סקר שביעות רצון נוסעים',
+
+  RESPONSES_SHEET: 'Responses',
+  RAW_SHEET: 'Raw',
+  ALERTS_SHEET: 'Alerts',
+};
+
+/**
+ * כללי תשובה שלילית. תשובה שעומדת בכלל אחד לפחות תפעיל התראה.
+ *   field    – חלק משם השדה כפי שמופיע בכותרת העמודה בלשונית Responses (ללא תלות באותיות גדולות/קטנות).
+ *              '*' = כל שדה.
+ *   values   – רשימת תשובות טקסט שנחשבות שליליות (התאמה מדויקת, ללא רווחים בקצוות).
+ *   maxScore – ציון מספרי שממנו ומטה התשובה שלילית (למשל 2 בסולם 1–5).
+ *
+ * דוגמה:
+ *   { field: 'satisfaction', maxScore: 2 },
+ *   { field: '*', values: ['לא מרוצה', 'גרוע'] },
+ */
+const NEGATIVE_RULES = [
+];
+
+// ===================== נקודות כניסה =====================
+
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    if (!e || !e.parameter || e.parameter.key !== CONFIG.SECRET_KEY) {
+      return respond_({ ok: false, error: 'unauthorized' });
+    }
+
+    const rawBody = e.postData ? e.postData.contents : '';
+    logRaw_(rawBody);
+
+    const payloads = parsePayload_(e);
+    payloads.forEach(handleResponse_);
+
+    return respond_({ ok: true, received: payloads.length });
+  } catch (err) {
+    logRaw_('ERROR: ' + err + '\n' + (e &amp;&amp; e.postData ? e.postData.contents : ''));
+    return respond_({ ok: false, error: String(err) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function doGet() {
+  return respond_({ ok: true, status: 'webhook is running' });
+}
+
+// ===================== עיבוד =====================
+
+function parsePayload_(e) {
+  const body = e.postData ? e.postData.contents : '';
+  let data;
+  try {
+    data = JSON.parse(body);
+  } catch (_) {
+    // פורמט Web Form: השדות מגיעים כפרמטרים רגילים.
+    data = Object.assign({}, e.parameter);
+    delete data.key;
+  }
+  // אם האפשרות Append responses שולחת כמה תשובות יחד – לטפל בכל אחת בנפרד.
+  return Array.isArray(data) ? data : [data];
+}
+
+function handleResponse_(payload) {
+  const flat = flatten_(payload);
+  flat['_received_at'] = new Date();
+
+  appendToSheet_(CONFIG.RESPONSES_SHEET, flat);
+
+  const hits = findNegatives_(flat);
+  if (hits.length) {
+    sendAlert_(flat, hits);
+    appendToSheet_(CONFIG.ALERTS_SHEET, {
+      _received_at: flat['_received_at'],
+      reasons: hits.map(h =&gt; h.field + ': ' + h.value).join(' | '),
+    });
+  }
+}
+
+function flatten_(obj, prefix, out) {
+  out = out || {};
+  prefix = prefix || '';
+  if (obj === null || obj === undefined) {
+    if (prefix) out[prefix] = '';
+    return out;
+  }
+  if (Array.isArray(obj)) {
+    if (obj.every(v =&gt; v === null || typeof v !== 'object')) {
+      out[prefix] = obj.join(', ');
+    } else {
+      obj.forEach((v, i) =&gt; flatten_(v, prefix ? prefix + '.' + i : String(i), out));
+    }
+    return out;
+  }
+  if (typeof obj === 'object') {
+    Object.keys(obj).forEach(k =&gt; flatten_(obj[k], prefix ? prefix + '.' + k : k, out));
+    return out;
+  }
+  out[prefix] = obj;
+  return out;
+}
+
+function findNegatives_(flat) {
+  const hits = [];
+  Object.keys(flat).forEach(key =&gt; {
+    if (key.charAt(0) === '_') return;
+    const value = flat[key];
+    const text = String(value).trim();
+    NEGATIVE_RULES.forEach(rule =&gt; {
+      const fieldMatch = rule.field === '*' || key.toLowerCase().indexOf(String(rule.field).toLowerCase()) !== -1;
+      if (!fieldMatch) return;
+      const valueMatch = rule.values &amp;&amp; rule.values.indexOf(text) !== -1;
+      const num = Number(text);
+      const scoreMatch = rule.maxScore !== undefined &amp;&amp; text !== '' &amp;&amp; !isNaN(num) &amp;&amp; num &lt;= rule.maxScore;
+      if (valueMatch || scoreMatch) hits.push({ field: key, value: text });
+    });
+  });
+  return hits;
+}
+
+// ===================== גיליון =====================
+
+function appendToSheet_(name, record) {
+  const sheet = getSheet_(name);
+  let headers = sheet.getLastColumn() &gt; 0
+    ? sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+    : [];
+
+  const missing = Object.keys(record).filter(k =&gt; headers.indexOf(k) === -1);
+  if (missing.length) {
+    headers = headers.concat(missing);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+
+  const row = headers.map(h =&gt; (h in record ? record[h] : ''));
+  sheet.appendRow(row);
+}
+
+function logRaw_(text) {
+  getSheet_(CONFIG.RAW_SHEET).appendRow([new Date(), text]);
+}
+
+function getSheet_(name) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  return ss.getSheetByName(name) || ss.insertSheet(name);
+}
+
+// ===================== מייל =====================
+
+function sendAlert_(flat, hits) {
+  const reasons = hits.map(h =&gt;
+    '&lt;li&gt;&lt;b&gt;' + escape_(h.field) + '&lt;/b&gt;: ' + escape_(h.value) + '&lt;/li&gt;').join('');
+  const details = Object.keys(flat)
+    .filter(k =&gt; k.charAt(0) !== '_')
+    .map(k =&gt; '&lt;tr&gt;&lt;td style="padding:4px 8px;border:1px solid #ddd"&gt;' + escape_(k) +
+              '&lt;/td&gt;&lt;td style="padding:4px 8px;border:1px solid #ddd"&gt;' + escape_(flat[k]) + '&lt;/td&gt;&lt;/tr&gt;')
+    .join('');
+
+  const html =
+    '&lt;div dir="rtl" style="font-family:Arial,sans-serif"&gt;' +
+    '&lt;p&gt;התקבלה תשובה שלילית בסקר &lt;b&gt;' + escape_(CONFIG.SURVEY_NAME) + '&lt;/b&gt;.&lt;/p&gt;' +
+    '&lt;p&gt;הסיבות שזוהו:&lt;/p&gt;&lt;ul&gt;' + reasons + '&lt;/ul&gt;' +
+    '&lt;p&gt;פרטי התשובה המלאה:&lt;/p&gt;' +
+    '&lt;table style="border-collapse:collapse"&gt;' + details + '&lt;/table&gt;' +
+    '&lt;/div&gt;';
+
+  MailApp.sendEmail({
+    to: CONFIG.ALERT_EMAILS,
+    subject: 'התראה: תשובה שלילית – ' + CONFIG.SURVEY_NAME,
+    htmlBody: html,
+  });
+}
+
+function escape_(v) {
+  return String(v === null || v === undefined ? '' : v)
+    .replace(/&amp;/g, '&amp;amp;').replace(/&lt;/g, '&amp;lt;').replace(/&gt;/g, '&amp;gt;').replace(/"/g, '&amp;quot;');
+}
+
+function respond_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ===================== בדיקה ידנית =====================
+
+/** הרצה ידנית מתוך העורך: מדמה תשובה ובודקת שהגיליון והמייל עובדים. */
+function testWebhook() {
+  const fake = {
+    parameter: { key: CONFIG.SECRET_KEY },
+    postData: { contents: JSON.stringify({ test: true, question: 'שביעות רצון', answer: 1 }) },
+  };
+  Logger.log(doPost(fake).getContent());
+}
+</pre>
+</section>
+</main>
+
+<script>
+document.getElementById('copy-btn').addEventListener('click', function(){
+  var btn=this, text=document.getElementById('code').textContent;
+  function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('code'));var s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent='הקוד מסומן, להעתיק עם Ctrl+C';}
+  try{navigator.clipboard.writeText(text).then(function(){btn.textContent='הקוד הועתק';},sel);}catch(e){sel();}
+});
+</script>
