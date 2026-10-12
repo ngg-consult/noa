@@ -151,7 +151,10 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
 .hint { font-size: .8rem; color: var(--muted); margin: 0; }
 
 .empty { text-align: start; color: var(--muted); padding: 24px 0; }
-.toast { position: fixed; inset-inline: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 480px; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: .92rem; box-shadow: 0 6px 20px rgb(0 0 0 / .18); }
+.closed-sum { cursor: pointer; font-family: var(--font-display); font-weight: 600; }
+details[open] .closed-sum { margin-bottom: 8px; }
+.toast-undo { font: inherit; font-weight: 700; background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; margin-inline-start: 12px; padding: 0; }
+.toast { display: flex; justify-content: space-between; align-items: center; position: fixed; inset-inline: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 480px; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: .92rem; box-shadow: 0 6px 20px rgb(0 0 0 / .18); }
 </style>
 
 <div class="wrap" dir="rtl" lang="he">
@@ -173,7 +176,7 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
 
   <section class="summary" id="summary" hidden aria-label="סיכום היום">
     <div class="stat"><b id="s-meetings">0</b><span>פגישות</span></div>
-    <div class="stat"><b id="s-tasks">0</b><span>משימות משובצות</span></div>
+    <div class="stat"><b id="s-tasks">0</b><span>משימות פתוחות</span></div>
     <div class="stat"><b id="s-done">0</b><span>בוצעו</span></div>
     <div class="stat"><b id="s-tomorrow">0</b><span id="l-tomorrow">עוברות למחר</span></div>
     <div class="matrix" aria-label="מטריצת אייזנהאואר – משימות פתוחות">
@@ -202,6 +205,13 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
           <div class="panel-head"><h2>לא שובץ</h2><span class="muted" style="font-size:.82rem">לא דחוף ולא חשוב, או ללא פעולה נדרשת</span></div>
           <ul class="plain" id="deferred-list"></ul>
         </div>
+      </section>
+
+      <section class="panel" id="closed" hidden>
+        <details>
+          <summary class="closed-sum">נסגרו היום (<span id="closed-count">0</span>)</summary>
+          <ul class="plain" id="closed-list"></ul>
+        </details>
       </section>
     </div>
 

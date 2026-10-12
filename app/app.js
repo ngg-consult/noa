@@ -423,7 +423,10 @@
     render();
     savePlan();
     var t = state.plan.tasks.find(function (x) { return x.id === id; });
-    if (activeView() === 'next') { if (status === 'done') toast('סומן כבוצע.'); return; }
+    var undo = function () { mark(id, 'pending'); toast('המשימה הוחזרה ללו"ז.'); };
+    if (status === 'dismissed') { toast('הוסר מהלו"ז.', undo); return; }
+    if (status === 'done') { toast(activeView() === 'next' ? 'סומן כבוצע.' : 'סומן כבוצע. שאר היום סודר מחדש.', undo); return; }
+    if (activeView() === 'next') return;
     if (status === 'missed' && t) {
       toast(t.placement === 'today' ? 'הועבר ל-' + E.fmt(t.start) + '. שאר היום סודר מחדש.' : 'אין חלון פנוי היום. המשימה עברה למחר.');
     } else if (status === 'done') toast('סומן כבוצע. שאר היום סודר מחדש.');
@@ -536,11 +539,19 @@
   }
 
   var toastTimer;
-  function toast(msg) {
+  function toast(msg, undo) {
     var t = $('toast');
-    t.textContent = msg; t.hidden = false;
+    t.innerHTML = '';
+    t.append(el('span', '', msg));
+    if (undo) {
+      var b = el('button', 'toast-undo', 'ביטול');
+      b.type = 'button';
+      b.onclick = function () { t.hidden = true; undo(); };
+      t.append(b);
+    }
+    t.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.hidden = true; }, 4200);
+    toastTimer = setTimeout(function () { t.hidden = true; }, undo ? 7000 : 4200);
   }
 
   function setBusy(msg) {
@@ -635,14 +646,17 @@
       $('empty').hidden = false;
       $('summary').hidden = true;
       $('later').hidden = true;
+      $('closed').hidden = true;
       return;
     }
     $('empty').hidden = true;
 
-    var today = plan.tasks.filter(function (t) { return t.start != null && t.status !== 'dismissed'; });
+    // מה שסומן "בוצע" או "לא רלוונטי" יורד מהתצוגה (ונשמר ברשימת "נסגרו")
+    var today = plan.tasks.filter(function (t) { return t.start != null && t.status === 'pending'; });
+    var closed = state.plan ? state.plan.tasks.filter(function (t) { return t.status === 'done' || t.status === 'dismissed'; }) : [];
     var tomorrow = plan.tasks.filter(function (t) { return t.placement === 'tomorrow' && t.status === 'pending'; });
     var deferred = plan.tasks.filter(function (t) { return t.placement === 'deferred' && t.status === 'pending'; });
-    var done = plan.tasks.filter(function (t) { return t.status === 'done'; }).length;
+    var done = (state.plan ? state.plan.tasks : []).filter(function (t) { return t.status === 'done'; }).length;
 
     // סיכום + מטריצה
     $('summary').hidden = false;
@@ -683,6 +697,24 @@
     fillSimple('deferred-list', deferred, true);
     $('tomorrow-wrap').hidden = !tomorrow.length;
     $('deferred-wrap').hidden = !deferred.length;
+    renderClosed(closed);
+  }
+
+  // רשימה מקופלת של מה שנסגר היום, עם אפשרות להחזיר ללו"ז
+  function renderClosed(closed) {
+    $('closed').hidden = !closed.length;
+    $('closed-count').textContent = closed.length;
+    var ul = $('closed-list');
+    ul.innerHTML = '';
+    closed.forEach(function (t) {
+      var li = el('li', 'mini');
+      var txt = el('div', 'mini-t');
+      txt.append(el('b', '', t.nextAction || t.title), el('span', 'muted', t.status === 'done' ? 'בוצע' : 'לא רלוונטי'));
+      var b = el('button', 'btn ghost small', 'החזרה ללו"ז');
+      b.onclick = function () { mark(t.id, 'pending'); };
+      li.append(txt, b);
+      ul.append(li);
+    });
   }
 
   function nowLine(min) {

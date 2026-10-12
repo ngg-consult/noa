@@ -151,7 +151,10 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
 .hint { font-size: .8rem; color: var(--muted); margin: 0; }
 
 .empty { text-align: start; color: var(--muted); padding: 24px 0; }
-.toast { position: fixed; inset-inline: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 480px; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: .92rem; box-shadow: 0 6px 20px rgb(0 0 0 / .18); }
+.closed-sum { cursor: pointer; font-family: var(--font-display); font-weight: 600; }
+details[open] .closed-sum { margin-bottom: 8px; }
+.toast-undo { font: inherit; font-weight: 700; background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; margin-inline-start: 12px; padding: 0; }
+.toast { display: flex; justify-content: space-between; align-items: center; position: fixed; inset-inline: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 480px; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 8px; font-size: .92rem; box-shadow: 0 6px 20px rgb(0 0 0 / .18); }
 </style>
 
 <div class="wrap" dir="rtl" lang="he">
@@ -173,7 +176,7 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
 
   <section class="summary" id="summary" hidden aria-label="סיכום היום">
     <div class="stat"><b id="s-meetings">0</b><span>פגישות</span></div>
-    <div class="stat"><b id="s-tasks">0</b><span>משימות משובצות</span></div>
+    <div class="stat"><b id="s-tasks">0</b><span>משימות פתוחות</span></div>
     <div class="stat"><b id="s-done">0</b><span>בוצעו</span></div>
     <div class="stat"><b id="s-tomorrow">0</b><span id="l-tomorrow">עוברות למחר</span></div>
     <div class="matrix" aria-label="מטריצת אייזנהאואר – משימות פתוחות">
@@ -202,6 +205,13 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
           <div class="panel-head"><h2>לא שובץ</h2><span class="muted" style="font-size:.82rem">לא דחוף ולא חשוב, או ללא פעולה נדרשת</span></div>
           <ul class="plain" id="deferred-list"></ul>
         </div>
+      </section>
+
+      <section class="panel" id="closed" hidden>
+        <details>
+          <summary class="closed-sum">נסגרו היום (<span id="closed-count">0</span>)</summary>
+          <ul class="plain" id="closed-list"></ul>
+        </details>
       </section>
     </div>
 
@@ -1286,7 +1296,10 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
     render();
     savePlan();
     var t = state.plan.tasks.find(function (x) { return x.id === id; });
-    if (activeView() === 'next') { if (status === 'done') toast('סומן כבוצע.'); return; }
+    var undo = function () { mark(id, 'pending'); toast('המשימה הוחזרה ללו"ז.'); };
+    if (status === 'dismissed') { toast('הוסר מהלו"ז.', undo); return; }
+    if (status === 'done') { toast(activeView() === 'next' ? 'סומן כבוצע.' : 'סומן כבוצע. שאר היום סודר מחדש.', undo); return; }
+    if (activeView() === 'next') return;
     if (status === 'missed' && t) {
       toast(t.placement === 'today' ? 'הועבר ל-' + E.fmt(t.start) + '. שאר היום סודר מחדש.' : 'אין חלון פנוי היום. המשימה עברה למחר.');
     } else if (status === 'done') toast('סומן כבוצע. שאר היום סודר מחדש.');
@@ -1399,11 +1412,19 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
   }
 
   var toastTimer;
-  function toast(msg) {
+  function toast(msg, undo) {
     var t = $('toast');
-    t.textContent = msg; t.hidden = false;
+    t.innerHTML = '';
+    t.append(el('span', '', msg));
+    if (undo) {
+      var b = el('button', 'toast-undo', 'ביטול');
+      b.type = 'button';
+      b.onclick = function () { t.hidden = true; undo(); };
+      t.append(b);
+    }
+    t.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.hidden = true; }, 4200);
+    toastTimer = setTimeout(function () { t.hidden = true; }, undo ? 7000 : 4200);
   }
 
   function setBusy(msg) {
@@ -1498,14 +1519,17 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
       $('empty').hidden = false;
       $('summary').hidden = true;
       $('later').hidden = true;
+      $('closed').hidden = true;
       return;
     }
     $('empty').hidden = true;
 
-    var today = plan.tasks.filter(function (t) { return t.start != null && t.status !== 'dismissed'; });
+    // מה שסומן "בוצע" או "לא רלוונטי" יורד מהתצוגה (ונשמר ברשימת "נסגרו")
+    var today = plan.tasks.filter(function (t) { return t.start != null && t.status === 'pending'; });
+    var closed = state.plan ? state.plan.tasks.filter(function (t) { return t.status === 'done' || t.status === 'dismissed'; }) : [];
     var tomorrow = plan.tasks.filter(function (t) { return t.placement === 'tomorrow' && t.status === 'pending'; });
     var deferred = plan.tasks.filter(function (t) { return t.placement === 'deferred' && t.status === 'pending'; });
-    var done = plan.tasks.filter(function (t) { return t.status === 'done'; }).length;
+    var done = (state.plan ? state.plan.tasks : []).filter(function (t) { return t.status === 'done'; }).length;
 
     // סיכום + מטריצה
     $('summary').hidden = false;
@@ -1546,6 +1570,24 @@ textarea { font: inherit; width: 100%; box-sizing: border-box; border: 1px solid
     fillSimple('deferred-list', deferred, true);
     $('tomorrow-wrap').hidden = !tomorrow.length;
     $('deferred-wrap').hidden = !deferred.length;
+    renderClosed(closed);
+  }
+
+  // רשימה מקופלת של מה שנסגר היום, עם אפשרות להחזיר ללו"ז
+  function renderClosed(closed) {
+    $('closed').hidden = !closed.length;
+    $('closed-count').textContent = closed.length;
+    var ul = $('closed-list');
+    ul.innerHTML = '';
+    closed.forEach(function (t) {
+      var li = el('li', 'mini');
+      var txt = el('div', 'mini-t');
+      txt.append(el('b', '', t.nextAction || t.title), el('span', 'muted', t.status === 'done' ? 'בוצע' : 'לא רלוונטי'));
+      var b = el('button', 'btn ghost small', 'החזרה ללו"ז');
+      b.onclick = function () { mark(t.id, 'pending'); };
+      li.append(txt, b);
+      ul.append(li);
+    });
   }
 
   function nowLine(min) {
